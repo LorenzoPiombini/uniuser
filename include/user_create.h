@@ -21,10 +21,23 @@
 /* used for randomization in password hashing*/
 #define RAN_DEV "/dev/urandom"
 
-/*files in SKEL*/
-#define PROFILE ".profile"
+/*file to understand distro, used for skelatal files
+ * RHEL :- rhel distors like CentOS, Fedora, Red Hat
+ * DEB :- debian distros like Debian, Ubuntu, Kali Linux 
+ **/
+#define DISTRO "/etc/os-release"
+#define RHEL 0
+#define DEB 1
+/*
+ * files in SKEL, FC means Fedora and Centos distros
+ * U means ubuntu
+ **/
+#define U_PROFILE ".profile"
+#define FC_PROFILE ".bash_profile"
+#define FC_MOZZILA ".mozzila"
 #define BASH_RC ".bashrc"
 #define BASH_LGO ".bash_logout"
+
 
 /*password security length*/
 #define PWD_L 8 

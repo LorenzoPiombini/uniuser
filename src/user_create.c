@@ -50,6 +50,7 @@ static int clean_up_file(char *username, char* file_name);
 static int cpy_skel(char *home_path, int home_path_length,int uid);
 static int cpy_file(FILE *src, FILE *dest);
 static int paswd_chk(char *passwrd);
+static int get_linux_distro();
 
 /* default values if there's no SYS_PARAM file*/
 static const int UID_MAX = 60000;
@@ -1153,8 +1154,23 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 	FILE *fp_hm_bashrc = NULL;
 	FILE *fp_bash_lgo = NULL;
 	FILE *fp_hm_bash_lgo = NULL;
+	size_t hm_profile_pth_l = 0; 
+	size_t hm_bashrc_path_l = 0; 
+	size_t hm_bash_lgo_path_l = 0;
+    size_t hm_mozzila_path_l = 0; 
 
-	size_t hm_profile_pth_l = strlen(PROFILE) + home_path_length + 2;
+    int distro = get_linux_distro();
+    
+    if(distro == -1) {
+        fprintf(stderr, "can't read %s.\n",DISTRO);
+        return - 1;
+    } else if(distro == DEB) {
+        hm_profile_pth_l = strlen(PROFILE) + home_path_length + 2;
+    } else if(distro == RHEL) {
+        hm_profile_pth_l = strlen(FC_PROFILE) + home_path_length + 2;
+        hm_mozzila_path_l = strlen(FC_MOZZILA) + home_path_length + 2;
+    }
+
 	size_t hm_bashrc_path_l = strlen(BASH_RC) + home_path_length + 2;
 	size_t hm_bash_lgo_path_l = strlen(BASH_LGO) + home_path_length +2;
 	
@@ -1425,5 +1441,50 @@ static int paswd_chk(char *passwrd)
 	}
 	
 	return num & upper & lower & punct;
+
+}
+/*
+ * get_linux_distro() return a positive number on success and -1 if it fails
+ *  return values are
+ *          DEB for debian like distros
+ *          RHEL for red hat like distros like fedora centOS
+ * */
+
+static int get_linux_distro()
+{
+    FILE *fp;
+    int status = 0;
+    int err = -1;
+    int columns = 80;
+    char line[columns];
+    memset(line,0,columns);
+
+    fp = fopen(DISTRO,"r");
+    if(!fp) {
+        status = err;
+        goto clean_on_exit;
+    }
+
+    while(fgets(line,column,fp)) {
+        if(strstr(line,"ID") == NULL) {
+            if(strstr(line,"fedora") ||
+                    strstr(line,"centos")) {
+                status = RHEL;
+                break;
+            } else if(strstr(line,"debian")) {
+                status = DEB;
+                break
+            }
+
+            memset(line,0,columns);
+            continue;
+        }
+    }
+
+clean_on_exit:
+    if(fp)
+        fclose(fp);
+
+    return status;
 
 }
