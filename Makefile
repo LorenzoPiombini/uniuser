@@ -27,7 +27,7 @@ library:
 
 
 $(TARGET):$(OBJ)
-	gcc -o $@ $? -lcrypt -lcom -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack 
+	gcc -o $@ $? -lcrypt -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack 
 
 obj/%.o:src/%.c
 	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIE -fsanitize=address
@@ -38,4 +38,6 @@ install:
 	install -m 755 $(SHAREDLIBuser) $(LIBDIR)
 	ldconfig
 
-.PHONY install object-dir default 
+build: object-dir default library install
+
+.PHONY install object-dir default library
