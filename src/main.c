@@ -10,7 +10,6 @@
 #include <errno.h>
 #include "user_create.h"
 #include "str_op.h"
-#include "com.h"
 
 int main(void)
 {
