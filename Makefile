@@ -38,6 +38,6 @@ install:
 	install -m 755 $(SHAREDLIBuser) $(LIBDIR)
 	ldconfig
 
-build: object-dir default library install
+build:object-dir default library install
 
-.PHONY install object-dir default library
+.PHONY: install object-dir default library
