@@ -13,7 +13,14 @@ default:$(TARGET)
 clean:
 	sudo rm -r obj/*.o
 	rm $(TARGET)
+	rm -f $(INCLUDEDIR)/user_create.h
+	rm -f $(LIBDIR)/$(LIBNAMEuser)
 
+object-dir:
+	@if [ ! -d ./obj ]; then\
+		echo "creating obj directory..." ;\
+		mkdir obj ;\
+	fi
 
 library:
 	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
@@ -30,3 +37,5 @@ install:
 	install -m 644 include/user_create.h $(INCLUDEDIR)
 	install -m 755 $(SHAREDLIBuser) $(LIBDIR)
 	ldconfig
+
+.PHONY install object-dir default 
