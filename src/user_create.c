@@ -95,9 +95,6 @@ int add_user(char *username, char *paswd)
 	size_t hm_l = strlen(username) + strlen(hm) +2;
 	char hm_path[hm_l];
 	memset(hm_path,0,hm_l);
-	/*
-	 * TODO : perform checks on username and password
-	 **/
 
 	struct sys_param param = {0};
 	int ret = get_sys_param(&param);
