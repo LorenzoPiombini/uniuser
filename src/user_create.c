@@ -1154,10 +1154,16 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 	FILE *fp_hm_bashrc = NULL;
 	FILE *fp_bash_lgo = NULL;
 	FILE *fp_hm_bash_lgo = NULL;
+    FILE *fp_mozzilla = NULL;
+    FILE *fp_hm_mozzilla = NULL;
 	size_t hm_profile_pth_l = 0; 
 	size_t hm_bashrc_path_l = 0; 
 	size_t hm_bash_lgo_path_l = 0;
-    size_t hm_mozzila_path_l = 0; 
+    size_t hm_mozzilla_pth_l = 0; 
+	size_t profile_pth_l = 0;
+    size_t mozzilla_pth_l = 0;
+	int status = 0;
+	int err = -1;
 
     int distro = get_linux_distro();
     
@@ -1165,16 +1171,18 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
         fprintf(stderr, "can't read %s.\n",DISTRO);
         return - 1;
     } else if(distro == DEB) {
-        hm_profile_pth_l = strlen(PROFILE) + home_path_length + 2;
+        hm_profile_pth_l = strlen(U_PROFILE) + home_path_length + 2;
+	    profile_pth_l = strlen(U_PROFILE) + strlen(SKEL) + 2;
     } else if(distro == RHEL) {
         hm_profile_pth_l = strlen(FC_PROFILE) + home_path_length + 2;
-        hm_mozzila_path_l = strlen(FC_MOZZILA) + home_path_length + 2;
+        hm_mozzilla_pth_l = strlen(FC_MOZZILA) + home_path_length + 2;
+	    profile_pth_l = strlen(FC_PROFILE) + strlen(SKEL) + 2;
+        mozzilla_pth_l = strlen(FC_MOZZILA) +strlen(SKEL) +2;
     }
 
-	size_t hm_bashrc_path_l = strlen(BASH_RC) + home_path_length + 2;
-	size_t hm_bash_lgo_path_l = strlen(BASH_LGO) + home_path_length +2;
+	hm_bashrc_path_l = strlen(BASH_RC) + home_path_length + 2;
+	hm_bash_lgo_path_l = strlen(BASH_LGO) + home_path_length +2;
 	
-	size_t profile_pth_l = strlen(PROFILE) + strlen(SKEL) + 2;
 	size_t bashrc_pth_l = strlen(BASH_RC) + strlen(SKEL) + 2;
 	size_t bash_lgo_pth_l = strlen(BASH_LGO) + strlen(SKEL) + 2;
 
@@ -1193,21 +1201,100 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 	memset(hm_bashrc_pth,0,hm_bashrc_path_l);
 	memset(hm_bash_lgo_pth,0,hm_bash_lgo_path_l);
 
-	if(snprintf(profile_pth,profile_pth_l,
-				"%s/%s",SKEL,PROFILE) < 0) {
-		fprintf(stderr,
-				"snprintf() failed, %s:%d.\n",
-				__FILE__,__LINE__-2);
-		return -1;
-	}
+    if(mozzilla_pth_l > 0) {
+        char hm_mozzilla_pth[hm_mozzilla_pth_l];
+        char mozzilla_pth[mozzilla_pth_l];
+        memset(mozzilla_pth,0,mozzilla_pth_l);
+        memset(hm_mozzilla_pth,0,hm_mozzilla_pth_l);
 
-	if(snprintf(hm_profile_pth,hm_profile_pth_l,
-				"%s/%s",home_path,PROFILE) < 0) {
-		fprintf(stderr,
+        if(snprintf(mozzilla_pth,mozzilla_pth_l,
+                    "%s/%s",SKEL,FC_MOZZILA) < 0) {
+		    fprintf(stderr,
 				"snprintf() failed, %s:%d.\n",
 				__FILE__,__LINE__-2);
-		return -1;
-	}
+	    	return -1;
+        }
+    
+        if(snprintf(hm_mozzilla_pth,hm_mozzilla_pth_l,
+                    "%s/%s",home_path,FC_MOZZILA) < 0) {
+		    fprintf(stderr,
+				"snprintf() failed, %s:%d.\n",
+				__FILE__,__LINE__-2);
+	    	return -1;
+        }
+
+    	if(snprintf(profile_pth,profile_pth_l,
+	    			"%s/%s",SKEL,FC_PROFILE) < 0) {
+	    	fprintf(stderr,
+				"snprintf() failed, %s:%d.\n",
+				__FILE__,__LINE__-2);
+	    	return -1;
+	    }
+
+    	if(snprintf(hm_profile_pth,hm_profile_pth_l,
+	    			"%s/%s",home_path,FC_PROFILE) < 0) {
+	    	fprintf(stderr,
+				"snprintf() failed, %s:%d.\n",
+				__FILE__,__LINE__-2);
+	    	return -1;
+	    }
+
+        fp_mozzilla = fopen(mozzilla_pth,"r");
+        if(!fp_mozzilla) {
+		    fprintf(stderr,"can't open %s.\n",mozzilla_pth);
+		    status = err;
+		    goto clean_on_exit;
+        }
+
+        fp_hm_mozzilla = fopen(hm_mozzilla_pth,"w");
+        if(!fp_hm_mozzilla) {
+		    fprintf(stderr,"can't open %s.\n",hm_mozzilla_pth);
+		    status = err;
+		    goto clean_on_exit;
+        }
+
+    	if(cpy_file(fp_mozzilla,fp_hm_mozzilla) == -1) {
+    		fprintf(stderr,
+	    			"copy file %s failed.\n",
+		    		mozzilla_pth);
+		    status = err;
+		    goto clean_on_exit;
+	    }
+
+	    if(cpy_file(fp_bashrc,fp_hm_bashrc) == -1) {
+	    	fprintf(stderr,
+		    		"copy file %s failed.\n",
+			    	bashrc_pth);
+		    status = err;
+	    	goto clean_on_exit;
+	    }
+        
+        if(chown(hm_mozzilla_pth,uid,uid) != 0) {
+            fprintf(stderr,
+                    "can't change %s ownership.\n",hm_mozzilla_pth);
+		    status = err;
+	    	goto clean_on_exit;
+        }
+
+    } else {
+
+    	if(snprintf(profile_pth,profile_pth_l,
+				"%s/%s",SKEL,U_PROFILE) < 0) {
+	    	fprintf(stderr,
+				"snprintf() failed, %s:%d.\n",
+				__FILE__,__LINE__-2);
+		    return -1;
+	    }
+
+	    if(snprintf(hm_profile_pth,hm_profile_pth_l,
+				"%s/%s",home_path,U_PROFILE) < 0) {
+	    	fprintf(stderr,
+				"snprintf() failed, %s:%d.\n",
+				__FILE__,__LINE__-2);
+		    return -1;
+	    }
+
+    }
 
 	if(snprintf(bashrc_pth,bashrc_pth_l,
 				"%s/%s",SKEL,BASH_RC) < 0) {
@@ -1241,8 +1328,6 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 		return -1;
 	}
 
-	int status = 0;
-	int err = -1;
 
 
 	fp_profile = fopen(profile_pth,"r");
@@ -1318,23 +1403,28 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 	       fprintf(stderr,"can't change files ownership");	
 
 clean_on_exit:
-	if(fp_profile)
+	if(fp_profile) {
 		fclose(fp_profile);
-
-	if(fp_hm_profile)
+    }
+	if(fp_hm_profile){
 		fclose(fp_hm_profile);
-
-	if(fp_bashrc)
+    }
+	if(fp_bashrc) {
 		fclose(fp_bashrc);
-
-	if(fp_hm_bashrc)
+    }
+	if(fp_hm_bashrc){
 		fclose(fp_hm_bashrc);
-	
-	if(fp_bash_lgo)
+    }
+	if(fp_bash_lgo) {
 		fclose(fp_bash_lgo);
-	
-	if(fp_hm_bash_lgo)
-		fclose(fp_hm_bash_lgo);
+    }
+	if(fp_hm_bash_lgo) {
+        fclose(fp_hm_bash_lgo);
+    }
+    if(fp_hm_mozzilla) {
+        fclose(fp_hm_mozzilla);
+    }
+
 
 	return status;
 }
@@ -1465,7 +1555,7 @@ static int get_linux_distro()
         goto clean_on_exit;
     }
 
-    while(fgets(line,column,fp)) {
+    while(fgets(line,columns,fp)) {
         if(strstr(line,"ID") == NULL) {
             if(strstr(line,"fedora") ||
                     strstr(line,"centos")) {
@@ -1473,7 +1563,7 @@ static int get_linux_distro()
                 break;
             } else if(strstr(line,"debian")) {
                 status = DEB;
-                break
+                break;
             }
 
             memset(line,0,columns);
