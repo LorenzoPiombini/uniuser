@@ -22,6 +22,13 @@ object-dir:
 		mkdir obj ;\
 	fi
 
+check-linker-path:                                                                                                
+	@if [ ! -f /etc/ld.so.conf.d/customtech.conf ]; then \
+        echo "setting linker configuration..." ;\
+        echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/customtech.conf >/dev/null ;\
+		sudo ldconfig;\
+	fi
+
 library:
 	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
 
@@ -38,6 +45,6 @@ install:
 	install -m 755 $(SHAREDLIBuser) $(LIBDIR)
 	ldconfig
 
-build:object-dir default library install
+build:object-dir default library check-linker-path install
 
-.PHONY: install object-dir default library
+.PHONY: install object-dir default library check-linker-path
