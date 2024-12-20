@@ -1273,14 +1273,6 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 		    goto clean_on_exit;
 	    }
 
-	    if(cpy_file(fp_bashrc,fp_hm_bashrc) == -1) {
-	    	fprintf(stderr,
-		    		"copy file %s failed.\n",
-			    	bashrc_pth);
-		    status = err;
-	    	goto clean_on_exit;
-	    }
-        
         if(chown(hm_mozzilla_pth,uid,uid) != 0) {
             fprintf(stderr,
                     "can't change %s ownership.\n",hm_mozzilla_pth);
