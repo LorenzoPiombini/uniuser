@@ -28,6 +28,8 @@ check-linker-path:
         echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/customtech.conf >/dev/null ;\
 		sudo ldconfig;\
 	fi
+mv-config.h:
+	mv config.h ./include
 
 library:
 	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
@@ -45,6 +47,6 @@ install:
 	install -m 755 $(SHAREDLIBuser) $(LIBDIR)
 	ldconfig
 
-build:object-dir default library check-linker-path install
+build:mv-config.h object-dir default library check-linker-path install
 
-.PHONY: install object-dir default library check-linker-path
+.PHONY: install object-dir default library check-linker-path mv-config.h

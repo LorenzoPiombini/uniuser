@@ -1,3 +1,9 @@
+#include "config.h"
+
+#if HAVE_STR_OP_H
+#include "str_op.h"
+#endif /* HAVE_STR_OP_H*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +19,6 @@
 #include <ctype.h>
 #include <termios.h>
 #include "user_create.h"
-#include "str_op.h"
 /*
  *  modify this files to create a new user 
  *	etc/group
@@ -51,6 +56,11 @@ static int cpy_skel(char *home_path, int home_path_length,int uid);
 static int cpy_file(FILE *src, FILE *dest);
 static int paswd_chk(char *passwrd);
 static int get_linux_distro();
+
+#if !HAVE_LIBSTROP
+static size_t number_of_digit(int n);
+#endif /*HAVE_LIBSTROP*/
+
 
 /* default values if there's no SYS_PARAM file*/
 static const int UID_MAX = 60000;
@@ -1582,3 +1592,29 @@ clean_on_exit:
     return status;
 
 }
+
+
+#if !HAVE_LIBSTROP
+static size_t number_of_digit(int n)
+{
+	if(n < 10) {
+		return 1;
+	}else if(n >= 10 && n < 100) {
+		return 2;
+	}else if(n >= 100 && n < 1000) {
+		return 3;
+	}else if(n >= 1000 && n < 10000) {
+		return 4;
+	}else if(n >= 10000 && n < 100000) {
+		return 5;
+	}else if(n >= 100000 && n < 1000000) {
+		return 6;
+	}else if(n >= 1000000 && n < 1000000000) {
+		return 7;
+	}else if(n >= 1000000000) {
+		return 10;
+	}
+
+	return -1;	
+}
+#endif /*HAVE_LIBSTROP*/
