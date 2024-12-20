@@ -13,7 +13,7 @@
 
 int main(void)
 {
-	int ret = add_user("amerigo","thisisapassphrase^U8");
+	int ret = add_user("seppty","thisisapassphrase^U8");
 	if(ret == -1 || ret >= 10) {
 		printf("add user failed!\n");
 		return EXIT_FAILURE;

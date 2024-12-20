@@ -26,8 +26,8 @@
  * DEB :- debian distros like Debian, Ubuntu, Kali Linux 
  **/
 #define DISTRO "/etc/os-release"
-#define RHEL 0
-#define DEB 1
+#define RHEL 1 
+#define DEB 2
 /*
  * files in SKEL, FC means Fedora and Centos distros
  * U means ubuntu

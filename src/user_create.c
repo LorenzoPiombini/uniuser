@@ -624,8 +624,12 @@ static int last_UID()
 	while(fgets(line,columns,fp)) {
 		strtok(line,":");
 		strtok(NULL,":");
+        char *t = strtok(NULL,":");
+        if(!t)
+            continue;
+
 		char *endptr;
-		int uid = (int) strtol(strtok(NULL,":"),&endptr,10);
+		int uid = (int) strtol(t,&endptr,10);
 		if(*endptr == '\0') {
 			if(uid < 1000 || uid > UID_MAX) {
 				memset(line,0,columns);
@@ -881,6 +885,7 @@ static int shdw_write(char *username, char *hash, struct sys_param *param)
 
 	/* length of the shadow string entry.
 	 * 8 is the number of colons,
+     * 1 is for '\n'
 	 * 1 is for '\0'
 	 * */
 	size_t entry_length = strlen(username) + strlen(hash) +\
@@ -888,12 +893,12 @@ static int shdw_write(char *username, char *hash, struct sys_param *param)
 			      number_of_digit((*param).PASS_MIN_DAYS) +\
 			      number_of_digit((*param).PASS_MAX_DAYS) +\
 			      number_of_digit((*param).PASS_WARN_AGE) +\
-			      8 + 1;
+			      8 + 1 + 1;
 	
 	char buffer[entry_length];
 	memset(buffer,0,entry_length);
 
-	if(snprintf(buffer,entry_length,"%s:%s:%ld:%d:%d:%d:::",
+	if(snprintf(buffer,entry_length,"%s:%s:%ld:%d:%d:%d:::\n",
 				username,hash,days_nr,
 				(*param).PASS_MIN_DAYS,
 				(*param).PASS_MAX_DAYS,
@@ -931,11 +936,12 @@ static int psdw_write(char *username, int uid)
 	/*
 	 * 6 number of colons
 	 * 1 for the x in password field
+     * 1 for '\n'
 	 * 1 for '\0'
 	 **/
 	size_t passwd_entry_length = strlen(username) + hm_pth_l +	\
 				    (number_of_digit(uid)*2) + strlen(bsh)+\
-				    6 + 1 + 1;
+				    6 + 1 + 1 + 1;
 	
 	char passwd_entry[passwd_entry_length];
 	memset(passwd_entry,0,passwd_entry_length);
@@ -1034,14 +1040,16 @@ static int group_write(char *username, int uid)
 {
 	/*
 	 * 3 number of colons
+     * 1 for 'x'
+     * 1 for '\n'
 	 * 1 for '\0' 
 	 **/
-	size_t entry_length = strlen(username) + number_of_digit(uid) + 3 + 1;
+	size_t entry_length = strlen(username) + number_of_digit(uid) + 3 + 1 + 1 + 1;
 	
 	char entry[entry_length];
 	memset(entry,0,entry_length);
 
-	if(snprintf(entry,entry_length,"%s:x:%d:",username,uid) < 0) {
+	if(snprintf(entry,entry_length,"%s:x:%d:\n",username,uid) < 0) {
 		fprintf(stderr,
 				"snprintf() failed, %s:%d.\n",
 				__FILE__,__LINE__-3);
@@ -1063,13 +1071,14 @@ static int gshdw_write(char *username)
 	/*
 	 * 3 number of columns
 	 * 1 space for '!'
+     * 1 for '\n'
 	 * 1 for '\0' 
 	 **/
-	size_t entry_length = strlen(username) + 3 + 1 + 1;
+	size_t entry_length = strlen(username) + 3 + 1 + 1 + 1;
 	char entry[entry_length];
 	memset(entry,0,entry_length);
 
-	if(snprintf(entry,entry_length,"%s:!::",username) < 0) {
+	if(snprintf(entry,entry_length,"%s:!::\n",username) < 0) {
 		fprintf(stderr,
 				"snprintf() failed, %s:%d.\n",
 				__FILE__,__LINE__-3);
@@ -1091,10 +1100,11 @@ static int subuid_write(char *username, unsigned int sub_uid, int count)
 	/*
 	 * 2 number of colons
 	 * 1 for '\0'
+     * 1 for '\n'
 	 **/
 	size_t entry_length = strlen(username) +\
 			      number_of_digit(sub_uid) +\
-			      number_of_digit(count) + 2 + 1;
+			      number_of_digit(count) + 2 + 1 + 1;
 	char entry[entry_length];
 	memset(entry,0,entry_length);
 
@@ -1115,15 +1125,18 @@ static int subuid_write(char *username, unsigned int sub_uid, int count)
 	return 1;
 
 }
+
 static int subgid_write(char *username, unsigned int sub_gid, int count)
 {
 	/*
 	 * 2 number of colons
+     * 1 for '\n'
 	 * 1 for '\0'
 	 **/
 	size_t entry_length = strlen(username) +\
 			      number_of_digit(sub_gid) +\
-			      number_of_digit(count) + 2 + 1;
+			      number_of_digit(count) + 2 + 1 + 1;
+
 	char entry[entry_length];
 	memset(entry,0,entry_length);
 
@@ -1142,7 +1155,6 @@ static int subgid_write(char *username, unsigned int sub_gid, int count)
 	}
 
 	return 1;
-
 }
 
 static int cpy_skel(char *home_path, int home_path_length, int uid)
@@ -1556,7 +1568,7 @@ static int get_linux_distro()
     }
 
     while(fgets(line,columns,fp)) {
-        if(strstr(line,"ID") == NULL) {
+        if(strstr(line,"ID")) {
             if(strstr(line,"fedora") ||
                     strstr(line,"centos")) {
                 status = RHEL;
