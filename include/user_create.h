@@ -34,7 +34,7 @@
  **/
 #define U_PROFILE ".profile"
 #define FC_PROFILE ".bash_profile"
-#define FC_MOZZILA ".mozzila"
+#define FC_MOZZILA ".mozilla"
 #define BASH_RC ".bashrc"
 #define BASH_LGO ".bash_logout"
 
