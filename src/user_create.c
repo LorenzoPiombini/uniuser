@@ -661,6 +661,10 @@ static int last_UID()
 	}
 	
 	fclose(fp);
+    if(max == 0) {
+        return uid; /*the last uid if there is no regular user but only root*/
+    }
+
 	return max; /*the last UID*/
 }
 
