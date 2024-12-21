@@ -38,7 +38,7 @@ library:
 
 
 $(TARGET):$(OBJ)
-	@if [ "@HAVE_LIBSTROP@" = "1"]; then\
+	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
 		gcc -o $@ $? -lcrypt -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack\
 	else\
 		gcc -o $@ $? -lcrypt -fsanitize=address -pie -z relro -z now -z noexecstack\
