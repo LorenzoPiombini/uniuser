@@ -31,6 +31,6 @@ int main(int arg, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	fprintf(stdin,"user %s, added.\n",username);
+	fprintf(stdout,"user %s, added.\n",username);
 	return EXIT_SUCCESS;
 }
