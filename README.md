@@ -21,4 +21,20 @@ libuser/$ sudo make build
 ```
 
 now you have a small program to test this library called user_manager 
+and the library is installed on your machine, so you can just use this in your C
+projects:
+
+```c
+#include "user_create.h"
+
+int main(void)
+{
+    /*your code*/
+    
+    add_user(username,password);
+
+    /*your code*/
+    return 0;
+}
+```
 
