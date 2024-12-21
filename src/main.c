@@ -9,7 +9,6 @@
 #include <pwd.h>
 #include <errno.h>
 #include "user_create.h"
-#include "str_op.h"
 
 int main(void)
 {
