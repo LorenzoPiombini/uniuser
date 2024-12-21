@@ -15,7 +15,7 @@ int main(int arg, char** argv)
     char Prog[] = "user_manager";
     if(arg < 3 || arg > 3) {
         fprintf(stderr,
-                "Usage: ./%s [username] [password]",
+                "Usage: ./%s [username] [password]\n",
                 Prog);
         return EXIT_FAILURE;
     }
