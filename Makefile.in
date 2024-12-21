@@ -2,17 +2,11 @@ TARGET = user_manager
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 OBJlibuser = obj/user_create.o
-STR = -lstrOP
-LIBS = -lcrypt $(STR)
 
 LIBNAMEuser = user
 LIBDIR = /usr/local/lib
 INCLUDEDIR = /usr/local/include
 SHAREDLIBuser = lib$(LIBNAMEuser).so
-
-ifeq (@HAVE_STR_OP_H@,0)
-STR=""
-endif
 
 default:$(TARGET)
 
@@ -44,7 +38,11 @@ library:
 
 
 $(TARGET):$(OBJ)
-	gcc -o $@ $? $(LIBS) -fsanitize=address -pie -z relro -z now -z noexecstack 
+	@if [ "@HAVE_LIBSTROP@" = "1"]; then\
+		gcc -o $@ $? -lcrypt -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack\
+	else\
+		gcc -o $@ $? -lcrypt -fsanitize=address -pie -z relro -z now -z noexecstack\
+	fi
 
 obj/%.o:src/%.c
 	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIE -fsanitize=address
