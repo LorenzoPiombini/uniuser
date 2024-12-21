@@ -960,7 +960,7 @@ static int psdw_write(char *username, int uid)
 	memset(passwd_entry,0,passwd_entry_length);
 
 	if(snprintf(passwd_entry,passwd_entry_length,
-				"%s:x:%d:%d::%s:%s",
+				"%s:x:%d:%d::%s:%s\n",
 				username,uid,uid,home_path,bsh) < 0) {
 		fprintf(stderr,
 				"snprintf() failed , %s:%d.\n",
@@ -1121,7 +1121,7 @@ static int subuid_write(char *username, unsigned int sub_uid, int count)
 	char entry[entry_length];
 	memset(entry,0,entry_length);
 
-	if(snprintf(entry,entry_length,"%s:%d:%d",username,sub_uid,count) < 0) {
+	if(snprintf(entry,entry_length,"%s:%d:%d\n",username,sub_uid,count) < 0) {
 		fprintf(stderr,
 				"snprintf() failed, %s:%d.\n",
 				__FILE__,__LINE__-3);
@@ -1153,7 +1153,7 @@ static int subgid_write(char *username, unsigned int sub_gid, int count)
 	char entry[entry_length];
 	memset(entry,0,entry_length);
 
-	if(snprintf(entry,entry_length,"%s:%d:%d",username,sub_gid,count) < 0) {
+	if(snprintf(entry,entry_length,"%s:%d:%d\n",username,sub_gid,count) < 0) {
 		fprintf(stderr,
 				"snprintf() failed, %s:%d.\n",
 				__FILE__,__LINE__-3);
