@@ -31,7 +31,9 @@ int main(void)
 {
     /*your code*/
     
-    add_user(username,password);
+    if(add_user(username,password) < 1001 ) {
+        /*handle error*/
+    }
 
     /*your code*/
     return 0;
