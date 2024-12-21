@@ -40,3 +40,12 @@ int main(void)
 }
 ```
 
+you can use the small program as a test tool to see the program behaviour, it works similar to an
+utility program, try this in your terminal, you have to have root privilegies:
+
+```plain text
+libuser/$ sudo ./user_manager Lorenzo Piombini
+```
+wrie here for bugs:
+lorenzopiombini3@gmail.com
+
