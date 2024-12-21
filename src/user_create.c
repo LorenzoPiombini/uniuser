@@ -88,7 +88,7 @@ int add_user(char *username, char *paswd)
 
 	int p_chk = paswd_chk(paswd);
 
-	if(p_chk == 0) {
+	if(p_chk == 0 || p_chk == -1) {
 		fprintf(stderr,"password does not meet security criteria.\n");
 		return -1;	
 	} else if (p_chk == ECHAR) {
@@ -1530,7 +1530,7 @@ static int paswd_chk(char *passwrd)
 	struct termios t;
 	if(tcgetattr(STDIN_FILENO,&t) == -1) {
 		fprintf(stderr,"can't check password against special char.\n");
-		return 0;
+		return -1;
 	}
 
 
