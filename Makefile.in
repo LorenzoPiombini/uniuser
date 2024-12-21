@@ -2,7 +2,7 @@ TARGET = user_manager
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 OBJlibuser = obj/user_create.o
-LIBS = -lcrypt @STR_OP@
+LIBS = -lcrypt
 
 LIBNAMEuser = user
 LIBDIR = /usr/local/lib
