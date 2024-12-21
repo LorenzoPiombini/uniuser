@@ -140,7 +140,7 @@ int add_user(char *username, char *paswd)
 		status = EMAX_U;
 		goto clean_on_exit;
 	}
-	
+    	
 	/* compute SUB_UID and SUB_GID */
 	unsigned int sub_gid = gen_SUB_GID(uid,&param);
 	if(sub_gid == 0 || sub_gid == -1) {
@@ -668,9 +668,18 @@ static int last_UID()
 	return max; /*the last UID*/
 }
 
-
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 {
+	unsigned int sub_gid = 0;
+    if(uid == 999) {
+        sub_gid = 100000;    
+	    return sub_gid;
+    }
+
+	int columns = 80;
+	char line[columns];
+	memset(line,0,columns);
+
 	FILE *fp = fopen(SUB_GID,"r");
 	if(!fp) {
 		printf("can't open %s.\n",SUB_GID);
@@ -684,10 +693,6 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 		return -1;
 	}		
 
-	unsigned int sub_gid = 0;
-	int columns = 80;
-	char line[columns];
-	memset(line,0,columns);
 
 	while(fgets(line,columns,fp)) {
 		if(strstr(line,pw->pw_name) == NULL) {
@@ -713,11 +718,18 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 
 static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 {
+	unsigned int sub_uid = 0;
+    if(uid == 999) {
+        sub_uid = 100000;    
+	    return sub_gid;
+    }
+
 	FILE *fp = fopen(SUB_UID,"r");
 	if(!fp) {
 		fprintf(stderr,"can't open %s.\n",SUB_UID);
 		return EXIT_FAILURE;
 	}
+
 
 	/* get the username based on the uid*/
 	struct passwd *pw = getpwuid(uid);
@@ -726,7 +738,6 @@ static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 		return EXIT_FAILURE;
 	}		
 
-	unsigned int sub_uid = 0;
 	int columns = 80;
 	char line[columns];
 	memset(line,0,columns);
