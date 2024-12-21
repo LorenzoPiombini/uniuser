@@ -12,7 +12,7 @@
 
 int main(int arg, char** argv)
 {
-    char Prog[] = "user_manager"
+    char Prog[] = "user_manager";
     if(arg < 3 || arg > 3) {
         fprintf(stderr,
                 "Usage: ./%s [username] [password]",
@@ -24,7 +24,7 @@ int main(int arg, char** argv)
     char* password = argv[2];
 
 	int ret = add_user(username,password);
-	if(ret == -1 || ret >= 10) {
+	if(ret < 1001) {
 		fprintf(stderr,
                 "%s: adding user failed!",
                 Prog);
