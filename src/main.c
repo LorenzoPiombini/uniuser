@@ -26,7 +26,7 @@ int main(int arg, char** argv)
 	int ret = add_user(username,password);
 	if(ret < 1001) {
 		fprintf(stderr,
-                "%s: adding user failed!",
+                "%s: adding user failed!\n",
                 Prog);
 		return EXIT_FAILURE;
 	}
