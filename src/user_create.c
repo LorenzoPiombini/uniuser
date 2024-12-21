@@ -376,6 +376,9 @@ int add_user(char *username, char *paswd)
 		status = err;
 		goto clean_on_exit;
 	}
+    
+    /*return the user id on success*/
+    status = uid;
 
 clean_on_exit:
 	if(param.ENCRYPT_METHOD)
