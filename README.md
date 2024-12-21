@@ -20,6 +20,7 @@ libuser/$ ./configure
 libuser/$ sudo make build
 ```
 
+## Use it in your code
 now you have a small program to test this library called user_manager 
 and the library is installed on your machine, so you can just use this in your C
 projects:
@@ -40,6 +41,7 @@ int main(void)
 }
 ```
 
+## Test the behaviour
 you can use the small program as a test tool to see the program behaviour, it works similar to an
 utility program, try this in your terminal, you have to have root privilegies:
 
