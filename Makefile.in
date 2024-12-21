@@ -34,7 +34,9 @@ check-linker-path:
 		sudo ldconfig;\
 	fi
 mv-config.h:
-	mv config.h ./include
+	@if [ -f ./config.h ]; then\
+		mv config.h ./include ;\
+	fi
 
 library:
 	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
