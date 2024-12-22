@@ -666,7 +666,7 @@ static int last_UID()
 		char *endptr;
 		uid = (int) strtol(t,&endptr,10);
 		if(*endptr == '\0') {
-			if(uid < 1000 || uid > UID_MAX) {
+			if(uid > UID_MAX) {
 				memset(line,0,columns);
 			       	continue;
 			}

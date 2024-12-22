@@ -44,7 +44,7 @@ $(TARGET):$(OBJ)
 	fi
 
 obj/%.o:src/%.c
-	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIE -fsanitize=address
+	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIC -fsanitize=address
 
 install:
 	install -d $(INCLUDEDIR)
