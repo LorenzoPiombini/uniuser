@@ -187,7 +187,7 @@ int add_user(char *username, char *paswd)
 	 * */
     
     /* 
-     * changing to root user, if theprogram is not run by root 
+     * changing to root user, if the program is not run by root 
      * or with root privilegies the function will fail
      * */
 
@@ -392,9 +392,8 @@ int add_user(char *username, char *paswd)
 					__FILE__,__LINE__-7);
 		}
 
-        /* remove the empty directory */
-        if(rmdir(hm_path) == -1)
-            fprintf(stderr,"can't remove %s\n",hm_path);
+        if(clean_home_dir(hm_path) == -1)
+            fprintf(stderr,"can't remove %s\n",hm_path);}
 
 		status = err;
 		goto clean_on_exit;
