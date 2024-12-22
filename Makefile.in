@@ -34,9 +34,8 @@ mv-config.h:
 	fi
 
 library:
-	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
-
-
+		sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
+		
 $(TARGET):$(OBJ)
 	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
 		gcc -o $@ $? -lcrypt -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack ;\

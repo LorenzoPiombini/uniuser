@@ -3305,6 +3305,7 @@ then :
 
 printf "%s\n" "#define HAVE_LIBSTROP 1" >>confdefs.h
 
+    HAVE_LIBSTROP="1"
 
 
 else $as_nop
@@ -3312,6 +3313,7 @@ else $as_nop
 
 printf "%s\n" "#define HAVE_LIBSTROP 0" >>confdefs.h
 
+    HAVE_LIBSTROP="0"
 
 
 fi

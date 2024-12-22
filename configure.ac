@@ -19,10 +19,10 @@ AC_CHECK_HEADERS([str_op.h], [
 #check fo libraries
 AC_CHECK_LIB([strOP], [main], [
     AC_DEFINE([HAVE_LIBSTROP], [1], [define to 1 if libstrOP is found])
-    AC_SUBST([HAVE_LIBSTROP])
+    AC_SUBST([HAVE_LIBSTROP],["1"])
 ], [
     AC_DEFINE([HAVE_LIBSTROP], [0], [define to 0 if libstrOP is not found])
-    AC_SUBST([HAVE_LIBSTROP])
+    AC_SUBST([HAVE_LIBSTROP],["0"])
 ])
 
 
