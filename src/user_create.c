@@ -16,8 +16,10 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <ctype.h>
 #include <termios.h>
+#include <dirent.h>
 #include "user_create.h"
 /*
  *  modify this files to create a new user 
@@ -56,6 +58,7 @@ static int cpy_skel(char *home_path, int home_path_length,int uid);
 static int cpy_file(FILE *src, FILE *dest);
 static int paswd_chk(char *passwrd);
 static int get_linux_distro();
+static int clean_home_dir(char *hm_path);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -179,9 +182,15 @@ int add_user(char *username, char *paswd)
 	}
 
 	/*
-	 * write the data to the files (12 files) to add the user
+	 * write the data to the files to add the user
 	 * @@@@@@@ ACQUIRE LOCKS TO BE SURE THIS PROGRAM IS THE ONLY ONE ADDING USERS!!!! @@@@ 
 	 * */
+    
+    /* 
+     * changing to root user, if theprogram is not run by root 
+     * or with root privilegies the function will fail
+     * */
+
 	if(setuid(0) == -1) {
 		status = err;
 		free(hash);
@@ -211,6 +220,12 @@ int add_user(char *username, char *paswd)
 	free(hash);
 	
 	uid++; /*incrementing the last user id by one to make the new user id */
+
+    /*
+     *  if one of this if test fails the program will clean the files 
+     *  already written to avoid partial users data and to ensure
+     *  data consistency
+     * */
 	if(!psdw_write(username,uid)) {
 		fprintf(stderr,
 				"psdw_write() failed, %s:%d.\n",
@@ -304,6 +319,7 @@ int add_user(char *username, char *paswd)
 	}
 	
 	lock = 0;
+
 	/*create home dir for the user*/
 	if(snprintf(hm_path,hm_l,"%s/%s",hm,username) < 0) {
 		if(clean_up_file(username,SHADOW) == -1 ||
@@ -354,6 +370,9 @@ int add_user(char *username, char *paswd)
 					"clean up files failed. %s:%d.\n",
 					__FILE__,__LINE__-7);
 		}
+        /* remove the empty dorectory */
+        if(rmdir(hm_path) == -1)
+            fprintf(stderr,"can't remove %s\n",hm_path);
 
 		status = err;
 		goto clean_on_exit;
@@ -372,6 +391,10 @@ int add_user(char *username, char *paswd)
 					"clean up files failed. %s:%d.\n",
 					__FILE__,__LINE__-7);
 		}
+
+        /* remove the empty directory */
+        if(rmdir(hm_path) == -1)
+            fprintf(stderr,"can't remove %s\n",hm_path);
 
 		status = err;
 		goto clean_on_exit;
@@ -1636,3 +1659,49 @@ static size_t number_of_digit(int n)
 	return -1;	
 }
 #endif /*HAVE_LIBSTROP*/
+
+/*
+ * clean_home_dir() check if the directory hm_path contains files,
+ * if so, it deletes them and remove the directory.
+ * return 0 on success and -1 on failure.
+ *
+ * this is used in case of error in the copying of
+ * skeletal files to the new user home directory
+ **/
+
+static int clean_home_dir(char *hm_path)
+{
+    DIR *dir = opendir(hm_path);
+    struct dirent *ent = {0};
+
+    if(!dir) {
+        if(errno == ENOENT) {
+           fprintf(stderr,
+                   "%s: no such a file or directory.\n",
+                   hm_path);
+           return -1;
+        }
+        fprintf(stderr,
+                "can't open %s.\n",
+                hm_path);
+        return -1;
+    } 
+
+    while((ent = readdir(dir))){
+        if(ent->d_type == DT_REG)
+            unlink(ent->d_name);
+    }
+
+    closedir(dir);
+    if(rmdir(hm_path) == -1) {
+       if(errno == ENOENT) {
+          fprintf(stderr,
+                        "%s: No such a file or direcotry.\n",
+                        hm_path);
+         return -1;
+       }
+       fprintf(stderr,"can't open %s.\n",hm_path);
+    } 
+
+    return 0;
+}
