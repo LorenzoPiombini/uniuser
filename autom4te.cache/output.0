@@ -649,6 +649,7 @@ ac_includes_default="\
 ac_header_c_list=
 ac_subst_vars='LTLIBOBJS
 LIB@&t@OBJS
+HAVE_LIBSTROP
 OBJEXT
 EXEEXT
 ac_ct_CC
@@ -3304,12 +3305,14 @@ then :
     
 printf "%s\n" "@%:@define HAVE_LIBSTROP 1" >>confdefs.h
 
+    
 
 else $as_nop
   
     
 printf "%s\n" "@%:@define HAVE_LIBSTROP 0" >>confdefs.h
 
+    
 
 fi
 
