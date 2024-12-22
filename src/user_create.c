@@ -684,7 +684,7 @@ static int last_UID()
 	
 	fclose(fp);
     if(max < 1000) {
-        return 1000 ; /*the last uid if there is no regular user but only root*/
+        return 999 ; /*the last uid if there is no regular user but only root*/
     }
 
 	return max; /*the last UID*/
@@ -693,7 +693,7 @@ static int last_UID()
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 {
 	unsigned int sub_gid = 0;
-    if(uid == 1000) {
+    if(uid == 999) {
         sub_gid = 100000;    
 	    return sub_gid;
     }
@@ -741,7 +741,7 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 {
 	unsigned int sub_uid = 0;
-    if(uid == 1000) {
+    if(uid == 999) {
         sub_uid = 100000;    
 	    return sub_uid;
     }
