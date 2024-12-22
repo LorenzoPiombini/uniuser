@@ -743,7 +743,7 @@ static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 	unsigned int sub_uid = 0;
     if(uid == 999) {
         sub_uid = 100000;    
-	    return sub_gid;
+	    return sub_uid;
     }
 
 	FILE *fp = fopen(SUB_UID,"r");
