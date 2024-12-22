@@ -1072,7 +1072,6 @@ static int write_file(char *file_name, char *entry, size_t entry_size, char *use
 		return 0;
 	}
 
-	size_t w_bytes = 0;
     if(fprintf(fp_main,"%s",entry) < 0) {
 		fclose(fp_main);
 		fprintf(stderr,
