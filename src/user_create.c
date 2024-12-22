@@ -655,7 +655,7 @@ static int last_UID()
 	char line[columns];
 	memset(line,0,columns);
 	int max = 0;
-
+    int uid = 0;
 	while(fgets(line,columns,fp)) {
 		strtok(line,":");
 		strtok(NULL,":");
@@ -664,7 +664,7 @@ static int last_UID()
             continue;
 
 		char *endptr;
-		int uid = (int) strtol(t,&endptr,10);
+		uid = (int) strtol(t,&endptr,10);
 		if(*endptr == '\0') {
 			if(uid < 1000 || uid > UID_MAX) {
 				memset(line,0,columns);
