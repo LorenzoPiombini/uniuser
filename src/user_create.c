@@ -393,7 +393,7 @@ int add_user(char *username, char *paswd)
 		}
 
         if(clean_home_dir(hm_path) == -1)
-            fprintf(stderr,"can't remove %s\n",hm_path);}
+            fprintf(stderr,"can't remove %s\n",hm_path);
 
 		status = err;
 		goto clean_on_exit;
