@@ -683,8 +683,8 @@ static int last_UID()
 	}
 	
 	fclose(fp);
-    if(max == 0) {
-        return uid; /*the last uid if there is no regular user but only root*/
+    if(max < 1000) {
+        return 1000 ; /*the last uid if there is no regular user but only root*/
     }
 
 	return max; /*the last UID*/
@@ -693,7 +693,7 @@ static int last_UID()
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 {
 	unsigned int sub_gid = 0;
-    if(uid == 999) {
+    if(uid == 1000) {
         sub_gid = 100000;    
 	    return sub_gid;
     }
@@ -741,7 +741,7 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 {
 	unsigned int sub_uid = 0;
-    if(uid == 999) {
+    if(uid == 1000) {
         sub_uid = 100000;    
 	    return sub_uid;
     }
@@ -1073,7 +1073,7 @@ static int write_file(char *file_name, char *entry, size_t entry_size, char *use
 	}
 
 	size_t w_bytes = 0;
-	if((w_bytes= fwrite(entry,sizeof(char),entry_size-1,fp_main)) != (entry_size-1)) {
+    if(fprintf(fp_main,"%s",entry) < 0) {
 		fclose(fp_main);
 		fprintf(stderr,
 				"%s() failed, %s:%d.\n",
