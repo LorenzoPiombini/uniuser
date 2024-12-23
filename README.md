@@ -32,7 +32,7 @@ int main(void)
 {
     /*your code*/
     
-    if(add_user(username,password) < 1001 ) {
+    if(add_user(username,password) < 1000 ) {
         /*handle error*/
     }
 
@@ -48,6 +48,5 @@ utility program, try this in your terminal, you have to have root privilegies:
 ```plain text
 libuser/$ sudo ./user_manager Lorenzo Piombini
 ```
-wrie here for bugs:
-lorenzopiombini3@gmail.com
+write here for bugs: lorenzopiombini3@gmail.com
 
