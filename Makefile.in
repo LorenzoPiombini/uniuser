@@ -1,6 +1,7 @@
 TARGET = user_manager
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
+OBJ_PROD = $(patsubst src/%.c, obj/%_prod.o, $(SRC))
 OBJlibuser = obj/user_create.o
 
 LIBNAMEuser = user
@@ -34,7 +35,7 @@ mv-config.h:
 	fi
 
 library:
-		sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
+	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
 		
 $(TARGET):$(OBJ)
 	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
@@ -46,6 +47,18 @@ $(TARGET):$(OBJ)
 obj/%.o:src/%.c
 	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIC -fsanitize=address
 
+$(TARGET)_prod:$(OBJ_PROD)
+	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
+		gcc -o $@ $? -lcrypt -lstrOP -pie -z relro -z now -z noexecstack ;\
+	else\
+		gcc -o $@ $? -lcrypt  -pie -z relro -z now -z noexecstack ;\
+	fi
+
+obj/%_prod.o:src/%.c
+	gcc -Wall -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIC 
+
+
+
 install:
 	install -d $(INCLUDEDIR)
 	install -m 644 include/user_create.h $(INCLUDEDIR)
@@ -54,4 +67,6 @@ install:
 
 build:mv-config.h object-dir default library check-linker-path install
 
-.PHONY: install object-dir default library check-linker-path mv-config.h
+build_prod:mv-config.h object-dir $(TARGET)_prod library check-linker-path install
+
+.PHONY: install object-dir default library check-linker-path mv-config.h $(TARGET)_prod
