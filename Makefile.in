@@ -3,6 +3,7 @@ SRC = $(wildcard src/*.c)
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 OBJ_PROD = $(patsubst src/%.c, obj/%_prod.o, $(SRC))
 OBJlibuser = obj/user_create.o
+OBJlibuserPR = obj/user_create_prod.o
 
 LIBNAMEuser = user
 LIBDIR = /usr/local/lib
@@ -39,6 +40,9 @@ mv-config.h:
 library:
 	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
 		
+libraryPR:
+	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuserPR)
+
 $(TARGET):$(OBJ)
 	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
 		gcc -o $@ $? -lcrypt -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack ;\
@@ -69,6 +73,6 @@ install:
 
 build:mv-config.h object-dir default library check-linker-path install
 
-build_prod:mv-config.h object-dir prod library check-linker-path install
+build_prod:mv-config.h object-dir prod libraryPR check-linker-path install
 
 .PHONY: install object-dir default library check-linker-path mv-config.h 
