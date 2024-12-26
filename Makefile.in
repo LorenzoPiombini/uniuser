@@ -11,6 +11,8 @@ SHAREDLIBuser = lib$(LIBNAMEuser).so
 
 default:$(TARGET)
 
+prod:$(TARGET)_prod
+
 clean:
 	sudo rm -r obj/*.o
 	rm $(TARGET)
