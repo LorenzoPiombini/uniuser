@@ -69,6 +69,6 @@ install:
 
 build:mv-config.h object-dir default library check-linker-path install
 
-build_prod:mv-config.h object-dir $(TARGET)_prod library check-linker-path install
+build_prod:mv-config.h object-dir prod library check-linker-path install
 
 .PHONY: install object-dir default library check-linker-path mv-config.h $(TARGET)_prod
