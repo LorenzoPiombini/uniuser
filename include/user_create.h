@@ -72,5 +72,6 @@ struct sys_param {
 
 
 int add_user(char *username, char *paswd);
+int login(char *username, char *passwd);
 
 #endif /* user_create.h */

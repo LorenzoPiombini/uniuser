@@ -82,6 +82,37 @@ static const char *ENCRYPT_METHOD = "SHA512";
 static const char *hm = "/home";
 static const char *bsh = "/bin/bash";
 
+int login(char *username, char *passwd)
+{
+        struct passwd *pw = getpwname(username);
+        if(!pw) {
+                fprintf(stderr,"user does't exist");
+                return -1;    
+        }
+        
+        
+	/*
+         * if the user exist
+         * encrtypt the password and compare it 
+         * with the password in the database.
+         * */
+	char *hash = NULL;
+	if(crypt_pswd(paswd,&hash) == -1) {
+		fprintf(stderr,
+				"paswd encryption failed. %s:%d.\n",
+				__FILE__,__LINE__-1);
+                return -1;
+        } 
+        
+        size_t l = strlen(hash);
+        if(strncmp(hash,pw->pw_passwd,l) != 0) {
+                fprintf(stderr,"wrong password or username.\n");
+                free(hash);
+                return -1;
+        }
+
+        return EXIT_SUCCESS;
+}
 int add_user(char *username, char *paswd)
 {
 	if(user_already_exist(username)) {
