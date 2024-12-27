@@ -84,7 +84,7 @@ static const char *bsh = "/bin/bash";
 
 int login(char *username, char *passwd)
 {
-        struct passwd *pw = getpwname(username);
+        struct passwd *pw = getpwnam(username);
         if(!pw) {
                 fprintf(stderr,"user does't exist");
                 return -1;    
@@ -97,7 +97,7 @@ int login(char *username, char *passwd)
          * with the password in the database.
          * */
 	char *hash = NULL;
-	if(crypt_pswd(paswd,&hash) == -1) {
+	if(crypt_pswd(passwd,&hash) == -1) {
 		fprintf(stderr,
 				"paswd encryption failed. %s:%d.\n",
 				__FILE__,__LINE__-1);
