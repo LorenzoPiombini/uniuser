@@ -59,6 +59,7 @@ static int cpy_file(FILE *src, FILE *dest);
 static int paswd_chk(char *passwrd);
 static int get_linux_distro();
 static int clean_home_dir(char *hm_path);
+static int get_save_pswd(char *username);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -103,15 +104,47 @@ int login(char *username, char *passwd)
 				__FILE__,__LINE__-1);
                 return -1;
         } 
-        
-        size_t l = strlen(hash);
-        if(strncmp(hash,pw->pw_passwd,l) != 0) {
+	
+	/*
+	 * get the passwd from SHADOW file,
+	 * and compare it to the saved password
+	 * */
+	if(get_save_pswd(username,hash) == -1) {
                 fprintf(stderr,"wrong password or username.\n");
                 free(hash);
-                return -1;
-        }
+		return 0;
+	}
 
+        free(hash);
         return EXIT_SUCCESS;
+}
+
+static int get_save_pswd(char *username, char *hash)
+{
+	FILE *fp;
+
+	do
+	{
+		fp = fopen(SHADOW,"r")
+	}while(fp == NULL);
+	
+	int columns = 200;
+	char line[columns];
+	memset(line,0,columns);
+
+	while(fgets(line,columns,fp)) {
+		char *t = strtok(line,":");
+		if(strlen(username) != strlen(t))
+			continue;
+
+		char *old_pswd = strtok(NULL,":");
+		if(strncmp(old_pswd,hash,strlen(old_pswd)) == 0)
+			return 0;
+
+	}
+
+	return -1;
+
 }
 int add_user(char *username, char *paswd)
 {
