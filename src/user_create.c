@@ -59,7 +59,7 @@ static int cpy_file(FILE *src, FILE *dest);
 static int paswd_chk(char *passwrd);
 static int get_linux_distro();
 static int clean_home_dir(char *hm_path);
-static int get_save_pswd(char *username);
+static int get_save_pswd(char *username, char* hash);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -125,7 +125,7 @@ static int get_save_pswd(char *username, char *hash)
 
 	do
 	{
-		fp = fopen(SHADOW,"r")
+		fp = fopen(SHADOW,"r");
 	}while(fp == NULL);
 	
 	int columns = 200;
