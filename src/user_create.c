@@ -918,7 +918,6 @@ static int crypt_pswd(char *paswd, char **hash)
 
 	/*
 	char random_bytes[64];
-	char const *prefix = "$y$10$";
 	memset(random_bytes,0,64);
 
 	if(!gen_random_bytes(random_bytes,64)) { 
@@ -929,7 +928,8 @@ static int crypt_pswd(char *paswd, char **hash)
 	}
 	*/
 
-	char *salt = crypt_gensalt(prefix, 0, random_bytes, 64);
+	char const *prefix = "$y$10$";
+	char *salt = crypt_gensalt(prefix, 0, randombytes, 64);
 	if(!salt) {
 		fprintf(stderr,
 				"crypt_gensalt() failed. %s:%d.\n",
