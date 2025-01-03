@@ -1782,3 +1782,18 @@ static int clean_home_dir(char *hm_path)
 
     return 0;
 }
+
+
+int get_user_info(char *username, char **home_pth, int *uid)
+{
+	struct passwd *pw = getpwnam(username);
+	if(!pw) {
+		fprintf(stderr,"%s() failed, %s:%d\n",
+		__func__,__FILE__,__LINE__);
+		return -1;
+	}
+
+	(*home_pth) = strdup(pw->pw_dir);
+	*uid = pw->pw_uid;
+	return 0;
+}
