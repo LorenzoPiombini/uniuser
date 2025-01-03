@@ -83,6 +83,15 @@ static const char *ENCRYPT_METHOD = "SHA512";
 static const char *hm = "/home";
 static const char *bsh = "/bin/bash";
 
+static const char randombytes[] = { 'c','&','d','"','o','6','@','^',
+			'f','a','1','!','~','`','%','*',
+			'k','l','o','p','6','7','(',')',
+			'Z','x','c','O','{','[','+','0',
+			':','\'','>','<','?','M','n','5',
+			'U','H','v','b','L','X','+','-',
+			'c','v','~','#','$','%','0','8',
+			'v','c','j','K','G','h','S','P',};
+
 int login(char *username, char *passwd)
 {
         struct passwd *pw = getpwnam(username);
