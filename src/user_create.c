@@ -112,7 +112,7 @@ int login(char *username, char *passwd)
 	if(get_save_pswd(username,hash) == -1) {
                 fprintf(stderr,"wrong password or username.\n");
                 free(hash);
-		return 0;
+		return -1;
 	}
 
         free(hash);
@@ -434,7 +434,7 @@ int add_user(char *username, char *paswd)
 					"clean up files failed. %s:%d.\n",
 					__FILE__,__LINE__-7);
 		}
-        /* remove the empty dorectory */
+        /* remove the empty directory */
         if(rmdir(hm_path) == -1)
             fprintf(stderr,"can't remove %s\n",hm_path);
 
@@ -911,7 +911,12 @@ static int crypt_pswd(char *paswd, char **hash)
 		data.input[i] = paswd[i];
 	}
 	
-	
+	/*
+	 * gerating random byte it is not racommended,
+	 * the hash will always be different and login will fail
+	 * */
+
+	/*
 	char random_bytes[64];
 	char const *prefix = "$y$10$";
 	memset(random_bytes,0,64);
@@ -922,6 +927,7 @@ static int crypt_pswd(char *paswd, char **hash)
 				__FILE__,__LINE__-1);
 		return EXIT_FAILURE;
 	}
+	*/
 
 	char *salt = crypt_gensalt(prefix, 0, random_bytes, 64);
 	if(!salt) {
