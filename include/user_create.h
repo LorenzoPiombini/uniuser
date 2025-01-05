@@ -70,6 +70,7 @@ struct sys_param {
 
 
 
+int crypt_pswd(char *paswd, char **hash);
 int add_user(char *username, char *paswd);
 int login(char *username, char *passwd);
 int get_user_info(char *username, char **home_pth, int *uid);

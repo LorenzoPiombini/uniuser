@@ -41,7 +41,6 @@ static unsigned char user_already_exist(char *username);
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param);
 static unsigned int gen_SUB_UID(int uid, struct sys_param *param);
 static unsigned char gen_random_bytes(char *buffer,int length);
-static int crypt_pswd(char *paswd, char **hash);
 static int lock_file(char *file_name);
 static int lock_files();
 static int unlock_file(char *file_name);
@@ -906,7 +905,8 @@ static unsigned char gen_random_bytes(char *buffer,int length)
 	return 1;
 
 }
-static int crypt_pswd(char *paswd, char **hash)
+
+int crypt_pswd(char *paswd, char **hash)
 {
 
 	size_t l = strlen(paswd);
