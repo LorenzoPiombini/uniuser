@@ -1,52 +1,65 @@
-# small user library for linux OS
+# libuser - A Small User Management Library for Linux
 
-this small library will give you the function add_user(char \*username, char \*password)
-so you can add user programmatically in a C program without exposing the shell, and avoiding 
-dangerous system call like system() or running command with popen() or the exec family functions.
+`libuser` is a lightweight C library designed to programmatically manage users on a Linux operating system. It provides a simple function, `add_user(char *username, char *password)`, allowing you to create users securely without relying on shell exposure or risky system calls like `system()`, `popen()`, or the `exec` family.
 
-## Get started
+## Features
+- Add users programmatically with `add_user()`.
+- Avoids unsafe shell interactions for better security.
+- Includes additional utilities like `del_user()`, `create_group()`, and `add_group_to_user()` (see `main.c` for examples).
+- Comes with a test program, `user_manager`, to demonstrate functionality.
 
-to use the library you have to clone this repo:
+## Prerequisites
+- A Linux-based operating system.
+- Root privileges (`sudo`) for building and testing.
+- GCC and standard C development tools (`make`, `git`, etc.).
 
-```plaintext
+## Getting Started
+
+### Clone the Repository
+To get started, clone the repository from GitHub:
+
+```bash
 $ git clone https://github.com/LorenzoPiombini/libuser.git
 ```
 
-then change into the cloned directory, and execute the configure script and the make build rule:
 
-```plaintext
+##Build and Install
+
+Navigate to the cloned directory and run the following commands to configure and build the library:
+
+```bash
 $ cd libuser
-libuser/$ ./configure
-libuser/$ sudo make build
+$ ./configure
+$ sudo make build
 ```
 
-## Use it in your code
-now you have a small program to test this library called user_manager 
-and the library is installed on your machine, so you can just use this in your C
-projects:
+This will compile the library and install it on your system, along with a test program called `user_manager`.
 
-```c
+##Using the Library in Your Code
+
+Once installed, you can include the library in your C projects. Below is a basic example:
+
+```c    
 #include "user_create.h"
 
-int main(void)
-{
-    /*your code*/
-    
-    if(add_user(username,password) < 1000 ) {
-        /*handle error*/
+int main(void) {
+    char *username = "testuser";
+    char *password = "securepassword";
+
+    if (add_user(username, password) < 1000) {
+        fprintf(stderr, "Error: Failed to add user '%s'\n", username);
+        return 1;
     }
 
-    /*your code*/
+    printf("User '%s' added successfully!\n", username);
     return 0;
 }
 ```
 
-## Test the behaviour
-you can use the small program as a test tool to see the program behaviour, it works similar to an
-utility program, try this in your terminal, you have to have root privilegies:
+##Return Values
 
-```plain text
-libuser/$ sudo ./user_manager Lorenzo Piombini
-```
-write here for bugs: lorenzopiombini3@gmail.com
+`add_user()` returns a value ≥ 1000 on success (UID).
+
+Values < 1000 indicate an error.
+
 

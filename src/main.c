@@ -24,7 +24,7 @@ int main(int arg, char** argv)
     char* password = argv[2];
 
 	int ret = add_user(username,password);
-	if(ret < 1001) {
+	if(ret < 1000) {
 		fprintf(stderr,
                 "%s: adding user failed!\n",
                 Prog);
