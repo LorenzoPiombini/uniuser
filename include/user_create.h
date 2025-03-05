@@ -68,14 +68,13 @@ struct sys_param {
 	char *ENCRYPT_METHOD;
 };
 
-
-
-
 int crypt_pswd(char *paswd, char **hash);
 int add_user(char *username, char *paswd);
 int login(char *username, char *passwd);
 int get_user_info(char *username, char **home_pth, int *uid);
 int del_user(char *username);
+int add_group(char* group_name);
+
 
 
 #endif /* user_create.h */

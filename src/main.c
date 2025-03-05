@@ -38,6 +38,12 @@ int main(int arg, char** argv)
 		return EXIT_FAILURE;
 	}
 
+	if(add_group("isThisAGroup?") == -1){
+		fprintf(stderr,"can't add group.\n");
+	}else {
+		fprintf(stderr,"group added!\n");
+	}
+
 	fprintf(stdout,"user %s, deleted.\n",username);
 	return EXIT_SUCCESS;
 }

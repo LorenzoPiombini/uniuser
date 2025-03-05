@@ -36,7 +36,7 @@
 
 /* local function prototype */
 static int get_sys_param(struct sys_param *param);
-static int last_UID();
+static int last_UID(char* file_name);
 static unsigned char user_already_exist(char *username);
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param);
 static unsigned int gen_SUB_UID(int uid, struct sys_param *param);
@@ -59,6 +59,7 @@ static int paswd_chk(char *passwrd);
 static int get_linux_distro();
 static int clean_home_dir(char *hm_path);
 static int get_save_pswd(char *username, char* hash);
+static int group_exist(char *group_name);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -210,7 +211,7 @@ int add_user(char *username, char *paswd)
 		}
 	}
 
-	int uid = last_UID();
+	int uid = last_UID(PASSWD);
 
 	if(uid == param.UID_MAX) {
 		status = EMAX_U;
@@ -505,6 +506,17 @@ int del_user(char *username)
 		return ENONE_U;	
 	}
 
+	/* 
+	* changing to root user, if the program is not run by root 
+	* or with root privilegies the function will fail
+	* */
+
+	if(setuid(0) == -1) {
+		fprintf(stderr,"permission denied.\n");
+		return -1;
+	}
+
+
 	/*lock the files*/
 	if(lock_files() == -1) {
 		/*cannot lock the file*/
@@ -526,6 +538,78 @@ int del_user(char *username)
 	
 	unlock_files();
 	return EXIT_SUCCESS;
+}
+
+int add_group(char* group_name)
+{
+	/* we need to write entry to
+	 *	-group
+	 *	-gshadow
+	 * */
+
+	/*check if the group exist */
+
+	unsigned char lock = 0;
+	int status = EXIT_SUCCESS;
+	int err = -1;
+	if(group_exist(group_name)){
+		return -1;		
+	}
+	/* 
+	* changing to root user, if the program is not run by root 
+	* or with root privilegies the function will fail
+	* */
+
+	if(setuid(0) == -1) {
+		fprintf(stderr,"permission denied.\n");
+		return -1;
+	}
+
+	if(lock_file(G_SHADOW_LCK) == -1 ||
+			lock_file(GP_LCK) == -1){
+		fprintf(stderr,"cannot acquire lock on files.\n");
+		return -1;	
+	}
+
+	lock = 1;
+
+	if(gshdw_write(group_name) == -1){
+		fprintf(stderr,"can't write to %s.\n",G_SHADOW);
+		goto clean_on_exit;
+	}
+
+	int uid = last_UID(GP);
+	if(uid == UID_MAX) {
+		status = EMAX_U;
+		goto clean_on_exit;
+	}
+    	
+	if(group_write(group_name,++uid) == -1){
+		fprintf(stderr,"can't write to %s.\n",GP);
+		status = err;
+		goto clean_on_exit;
+	}
+	
+	if(unlock_file(G_SHADOW_LCK) == -1 ||
+		unlock_file(GP_LCK) == -1){
+		fprintf(stderr,"can't release lock or lock not acquired.\n");
+		status = err;
+		goto clean_on_exit;
+	}
+
+	lock = 0;
+clean_on_exit:
+	if(lock){
+		if(unlock_file(G_SHADOW_LCK) == -1 ||
+				unlock_file(GP_LCK) == -1){
+			fprintf(stderr,"can't release lock or lock not acquired.\n");
+			status = err;
+		}
+	}
+
+
+	return status;
+
 }
 
 static int get_sys_param(struct sys_param *param)
@@ -758,11 +842,10 @@ clean_on_exit:
 
 }
 
-static int last_UID()
+static int last_UID(char* file_name)
 {
-	FILE *fp = fopen(GP,"r");
-	if(!fp)
-	{
+	FILE *fp = fopen(file_name,"r");
+	if(!fp) {
 		fprintf(stderr,"can't open %s.\n",GP);
 		return EXIT_FAILURE;
 	}
@@ -1302,7 +1385,7 @@ static int subgid_write(char *username, unsigned int sub_gid, int count)
 {
 	/*
 	 * 2 number of colons
-     * 1 for '\n'
+	 * 1 for '\n'
 	 * 1 for '\0'
 	 **/
 	size_t entry_length = strlen(username) +\
@@ -1338,31 +1421,31 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 	FILE *fp_hm_bashrc = NULL;
 	FILE *fp_bash_lgo = NULL;
 	FILE *fp_hm_bash_lgo = NULL;
-    FILE *fp_mozzilla = NULL;
-    FILE *fp_hm_mozzilla = NULL;
+	FILE *fp_mozzilla = NULL;
+	FILE *fp_hm_mozzilla = NULL;
 	size_t hm_profile_pth_l = 0; 
 	size_t hm_bashrc_path_l = 0; 
 	size_t hm_bash_lgo_path_l = 0;
-    size_t hm_mozzilla_pth_l = 0; 
+	size_t hm_mozzilla_pth_l = 0; 
 	size_t profile_pth_l = 0;
-    size_t mozzilla_pth_l = 0;
+	size_t mozzilla_pth_l = 0;
 	int status = 0;
 	int err = -1;
 
-    int distro = get_linux_distro();
+	int distro = get_linux_distro();
     
-    if(distro == -1) {
-        fprintf(stderr, "can't read %s.\n",DISTRO);
-        return - 1;
-    } else if(distro == DEB) {
-        hm_profile_pth_l = strlen(U_PROFILE) + home_path_length + 2;
+	if(distro == -1) {
+		fprintf(stderr, "can't read %s.\n",DISTRO);
+		return - 1;
+	} else if(distro == DEB) {
+	    hm_profile_pth_l = strlen(U_PROFILE) + home_path_length + 2;
 	    profile_pth_l = strlen(U_PROFILE) + strlen(SKEL) + 2;
-    } else if(distro == RHEL) {
-        hm_profile_pth_l = strlen(FC_PROFILE) + home_path_length + 2;
-        hm_mozzilla_pth_l = strlen(FC_MOZZILA) + home_path_length + 2;
-	    profile_pth_l = strlen(FC_PROFILE) + strlen(SKEL) + 2;
-        mozzilla_pth_l = strlen(FC_MOZZILA) +strlen(SKEL) +2;
-    }
+	} else if(distro == RHEL) {
+		hm_profile_pth_l = strlen(FC_PROFILE) + home_path_length + 2;
+		hm_mozzilla_pth_l = strlen(FC_MOZZILA) + home_path_length + 2;
+		profile_pth_l = strlen(FC_PROFILE) + strlen(SKEL) + 2;
+		mozzilla_pth_l = strlen(FC_MOZZILA) +strlen(SKEL) +2;
+	}
 
 	hm_bashrc_path_l = strlen(BASH_RC) + home_path_length + 2;
 	hm_bash_lgo_path_l = strlen(BASH_LGO) + home_path_length +2;
@@ -1839,5 +1922,31 @@ int get_user_info(char *username, char **home_pth, int *uid)
 
 	(*home_pth) = strdup(pw->pw_dir);
 	*uid = pw->pw_uid;
+	return 0;
+}
+
+
+static int group_exist(char *group_name)
+{
+	FILE *fp = fopen(GP,"r");
+	if(!fp){
+		fprintf(stderr,"can't open %s.\n",GP);
+		return -1;
+	}
+
+	int column = 50;
+	char line[column];
+	memset(line,0,column);
+	while(fgets(line,column,fp)){
+		if(strstr(line,group_name) != NULL ){
+			fprintf(stderr,"group_already_exist\n");
+			fclose(fp);
+			return 1;	
+		}
+		
+		memset(line,0,column);
+	}
+
+	fclose(fp);
 	return 0;
 }
