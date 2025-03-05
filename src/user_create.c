@@ -38,6 +38,7 @@
 static int get_sys_param(struct sys_param *param);
 static int last_UID(char* file_name);
 static unsigned char user_already_exist(char *username);
+static int group_exist(char *group_name);
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param);
 static unsigned int gen_SUB_UID(int uid, struct sys_param *param);
 static unsigned char gen_random_bytes(char *buffer,int length);
@@ -59,7 +60,7 @@ static int paswd_chk(char *passwrd);
 static int get_linux_distro();
 static int clean_home_dir(char *hm_path);
 static int get_save_pswd(char *username, char* hash);
-static int group_exist(char *group_name);
+static int add_entry_to_group_file(char *file_name, char *group_name, char *username);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -540,7 +541,70 @@ int del_user(char *username)
 	return EXIT_SUCCESS;
 }
 
-int add_group(char* group_name)
+int add_group_to_user(char *username, char *group_name)
+{
+	unsigned char lock = 0;
+	int status = EXIT_SUCCESS;
+	int err = -1;
+	if(!group_exist(group_name)){
+		fprintf(stderr,"group does not exist.\n");
+		return -1;		
+	}
+
+	if(!user_already_exist(username)) {
+		printf("user does not exist.\n");
+		return EALRDY_U;	
+	}
+
+	/*
+	 * if the user does not have root 
+	 * privilegies the program exits
+	 * */
+	if(setuid(0) == -1) {
+		fprintf(stderr,"permission denied.\n");
+		return -1;
+	}
+
+	if(lock_file(G_SHADOW_LCK) == -1 ||
+			lock_file(GP_LCK) == -1){
+		fprintf(stderr,"cannot acquire lock on files.\n");
+		return -1;	
+	}
+
+	lock = 1;
+	
+	/* write the new entry to the files */
+	
+        if(add_entry_to_group_file(GP,group_name,username) == -1 ||
+			add_entry_to_group_file(G_SHADOW,group_name,username) == -1){
+			fprintf(stderr,"can't add group %s to user %s.\n", group_name,username);
+			status = err;
+			goto clean_on_exit;
+	}
+	
+	if(unlock_file(G_SHADOW_LCK) == -1 ||
+		unlock_file(GP_LCK) == -1){
+		fprintf(stderr,"can't release lock or lock not acquired.\n");
+		status = err;
+		goto clean_on_exit;
+	}
+
+	lock = 0;
+
+clean_on_exit:
+	if(lock){
+		if(unlock_file(G_SHADOW_LCK) == -1 ||
+				unlock_file(GP_LCK) == -1){
+			fprintf(stderr,"can't release lock or lock not acquired.\n");
+			status = err;
+		}
+	}
+
+
+	return status;
+
+}
+int create_group(char* group_name)
 {
 	/* we need to write entry to
 	 *	-group
@@ -1232,6 +1296,7 @@ static int clean_up_file(char *username,char *file_name) {
 		fprintf(stderr,"can't open %s", file_name);
 		return -1;
 	}
+
 	char *tmp_file = "/etc/tmp.clean";
 	FILE *tmp = fopen(tmp_file,"w");
 	if(!tmp) {
@@ -1268,6 +1333,71 @@ static int clean_up_file(char *username,char *file_name) {
 	return 0; /* success*/ 
 }
 
+static int add_entry_to_group_file( char *file_name, char *group_name, char *username)
+{
+
+	FILE *fp = fopen(file_name,"r");
+	if(!fp){
+		fprintf(stderr,"can't open file %s.\n",GP);
+		return -1;
+	}
+
+	char *tmp_file = "/etc/tmp.clean";
+	FILE *tmp = fopen(tmp_file,"w");
+	if(!tmp) {
+		fprintf(stderr,"can't open %s", file_name);
+		fclose(fp);
+		return -1;
+	}
+
+	int buf_size = 5000;
+	char buffer[buf_size]; 
+	memset(buffer,0,buf_size);
+	
+	while(fgets(buffer,buf_size,fp)) {
+		if(strstr(buffer,group_name) == NULL) {
+			fputs(buffer,tmp);
+		}else{
+
+			/*find end of the line*/
+			int i;
+			for(i = 0; buffer[i] != '\n'; i++);
+
+			/*apend the username to the group */
+			size_t l = strlen(username);
+			if(buffer[i-1] == ':'){
+				strncpy(&buffer[i],username,l);
+				buffer[i+l] = '\n';
+				fputs(buffer,tmp);
+
+			} else {
+				buffer[i] = ',';
+				strncpy(&buffer[i+1],username,l);
+				buffer[i+1+l] = '\n';
+				fputs(buffer,tmp);
+			}
+		}
+
+		memset(buffer,0,buf_size);
+	}
+
+	fclose(tmp);
+	fclose(fp);
+	
+	if(remove(file_name) != 0) {
+		fprintf(stderr,"can't delete %s", file_name);
+		return -1;
+	}
+	
+	if(rename(tmp_file,file_name) != 0) {
+		fprintf(stderr,"can't rename file %s.\n",tmp_file);
+		return -1;
+	}
+
+	return 0; /* success*/ 
+
+}
+
 static int write_file(char *file_name, char *entry, size_t entry_size, char *username)
 {	
 	FILE *fp_main = fopen(file_name, "a");
@@ -1295,8 +1425,8 @@ static int group_write(char *username, int uid)
 {
 	/*
 	 * 3 number of colons
-     * 1 for 'x'
-     * 1 for '\n'
+	 * 1 for 'x'
+	 * 1 for '\n'
 	 * 1 for '\0' 
 	 **/
 	size_t entry_length = strlen(username) + number_of_digit(uid) + 3 + 1 + 1 + 1;

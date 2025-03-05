@@ -38,12 +38,17 @@ int main(int arg, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	if(add_group("isThisAGroup?") == -1){
+	if(create_group("isThisAGroup?") == -1){
 		fprintf(stderr,"can't add group.\n");
 	}else {
 		fprintf(stderr,"group added!\n");
 	}
 
+	if(add_group_to_user("Kings","isThisAGroup?") == -1){
+		printf("add user to group failed.\n");
+	} else {
+		printf("group added to user!");
+	}
 	fprintf(stdout,"user %s, deleted.\n",username);
 	return EXIT_SUCCESS;
 }

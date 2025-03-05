@@ -73,7 +73,8 @@ int add_user(char *username, char *paswd);
 int login(char *username, char *passwd);
 int get_user_info(char *username, char **home_pth, int *uid);
 int del_user(char *username);
-int add_group(char* group_name);
+int create_group(char* group_name);
+int add_group_to_user(char *username, char *group_name);
 
 
 
