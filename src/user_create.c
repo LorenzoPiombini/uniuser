@@ -154,6 +154,7 @@ static int get_save_pswd(char *username, char *hash)
 	return -1;
 
 }
+
 int add_user(char *username, char *paswd)
 {
 	if(user_already_exist(username)) {
@@ -482,6 +483,49 @@ clean_on_exit:
 		unlock_files();
 			
 	return status;
+}
+
+int del_user(char *username)
+{
+	/*
+	 * to remove the user we have to delete
+	 * the user entry form
+	 *	-passwd file 
+	 *	-group file
+	 *	-shadow file
+	 *	-gshadow file
+	 *	-subgid file
+	 *	-subuid file
+	 * */
+
+
+	/*check if the user exists */
+	if(!user_already_exist(username)) {
+		printf("user does not exist.\n");
+		return ENONE_U;	
+	}
+
+	/*lock the files*/
+	if(lock_files() == -1) {
+		/*cannot lock the file*/
+		fprintf(stderr,"cannot acquire lock on users db files.\n");
+		return -1;
+	}
+
+	if(clean_up_file(username,SHADOW) == -1 ||
+		   clean_up_file(username,PASSWD) == -1 ||
+		   clean_up_file(username,GP) == -1 ||
+		   clean_up_file(username,G_SHADOW) == -1 ||
+		   clean_up_file(username,SUB_UID) == -1 ||
+		   clean_up_file(username,SUB_GID) == -1 ) {
+		fprintf(stderr, "cannot remove user.\n");
+		unlock_files();
+		return -1;
+	}
+
+	
+	unlock_files();
+	return EXIT_SUCCESS;
 }
 
 static int get_sys_param(struct sys_param *param)

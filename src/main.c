@@ -32,5 +32,12 @@ int main(int arg, char** argv)
 	}
 
 	fprintf(stdout,"user %s, added.\n",username);
+
+	if(del_user(username) == -1){
+		fprintf(stdout,"del_user() failed.\n");
+		return EXIT_FAILURE;
+	}
+
+	fprintf(stdout,"user %s, deleted.\n",username);
 	return EXIT_SUCCESS;
 }

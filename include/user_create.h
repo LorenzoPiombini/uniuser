@@ -48,6 +48,7 @@
 #define ESGID 12 /*SUB_GID_MAX overflowed */
 #define ESUID 13 /*SUB_UID_MAX overflowed */
 #define ECHAR 13 /* passowrd contain KILL or ERASE system char */
+#define ENONE_U 14  /* user does not exist */
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/
@@ -74,5 +75,7 @@ int crypt_pswd(char *paswd, char **hash);
 int add_user(char *username, char *paswd);
 int login(char *username, char *passwd);
 int get_user_info(char *username, char **home_pth, int *uid);
+int del_user(char *username);
+
 
 #endif /* user_create.h */
