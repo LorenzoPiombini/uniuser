@@ -35,7 +35,7 @@ $ sudo make build
 
 This will compile the library and install it on your system, along with a test program called `user_manager`.
 
-##Using the Library in Your Code
+## Using the Library in Your Code
 
 Once installed, you can include the library in your C projects. Below is a basic example:
 
@@ -56,7 +56,7 @@ int main(void) {
 }
 ```
 
-##Return Values
+## Return Values
 
 `add_user()` returns a value ≥ 1000 on success (UID).
 
