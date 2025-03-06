@@ -41,7 +41,7 @@ static unsigned char user_already_exist(char *username);
 static int group_exist(char *group_name);
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param);
 static unsigned int gen_SUB_UID(int uid, struct sys_param *param);
-static unsigned char gen_random_bytes(char *buffer,int length);
+/*static unsigned char gen_random_bytes(char *buffer,int length);*/
 static int lock_file(char *file_name);
 static int lock_files();
 static int unlock_file(char *file_name);
@@ -61,6 +61,9 @@ static int get_linux_distro();
 static int clean_home_dir(char *hm_path);
 static int get_save_pswd(char *username, char* hash);
 static int add_entry_to_group_file( char *file_name, char *group_name, char *username, int mod);
+static int directory_exist(char *path);
+static int remove_directory(char *path_dir);
+
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -487,7 +490,7 @@ clean_on_exit:
 	return status;
 }
 
-int del_user(char *username)
+int del_user(char *username, int mod)
 {
 	/*
 	 * to remove the user we have to delete
@@ -506,6 +509,12 @@ int del_user(char *username)
 		return ENONE_U;	
 	}
 
+	struct passwd *pw = getpwnam(username);
+        if(!pw) {
+                fprintf(stderr,"user does't exist");
+                return -1;    
+        }
+        
 	/* 
 	* changing to root user, if the program is not run by root 
 	* or with root privilegies the function will fail
@@ -537,21 +546,144 @@ int del_user(char *username)
 
 	
 	unlock_files();
+
+	/*delete home/dir*/
+
+
+	if( mod == DEL_SAFE){
+
+		if(directory_exist(USER_DEL_DIR)){
+			/*1 is for '\0' and 1 is for '/' so +2*/
+			size_t l = strlen(USER_DEL_DIR)+strlen(username) + 2;
+			
+			char new_dir_path[l];
+			memset(new_dir_path,0,l);
+			if(snprintf(new_dir_path,l,"%s/%s",USER_DEL_DIR,username) < 0){
+				fprintf(stderr,"sprintf() failed %s:%d.\n",__FILE__,__LINE__);
+				return -1;			
+			}
+
+			rename(pw->pw_dir,new_dir_path);
+		}else{
+			if(mkdir(USER_DEL_DIR,S_IRWXU) == -1){
+				fprintf(stderr,"cannot create %s direcotry.\n",USER_DEL_DIR);
+				return -1;	
+			}
+			/*1 is for '\0' and 1 is for '/' so +2*/
+			size_t l = strlen(USER_DEL_DIR)+strlen(username) + 2;
+			
+			char new_dir_path[l];
+			memset(new_dir_path,0,l);
+			if(snprintf(new_dir_path,l,"%s/%s",USER_DEL_DIR,username) < 0){
+				fprintf(stderr,"sprintf() failed %s:%d.\n",__FILE__,__LINE__-1);
+				return -1;			
+			}
+		
+			rename(pw->pw_dir,new_dir_path);
+		}
+	
+	}else if(mod == DEL_FULL) {
+		if(remove_directory(pw->pw_dir) == -1){
+			return -1;
+		}
+	}
+
 	return EXIT_SUCCESS;
 }
 
+static int remove_directory(char *path_dir)
+{
+	/*get current directory */
+	char cur_dir[500];
+	if(getcwd(cur_dir,500) == NULL){
+		fprintf(stderr,"can't get current directory");
+		return -1;
+	}
+	
+	if(chdir(path_dir) != 0) {
+		fprintf(stderr,"can't change into %s.\n", path_dir);
+		return -1;
+	}
+
+	DIR *dirp = opendir(path_dir);
+	if(!dirp) {
+		fprintf(stderr,"can't remove directory %s.\n",path_dir);
+		if(chdir(cur_dir) != 0) {
+			fprintf(stderr,"can't change into %s.\n", cur_dir);
+			return -1;
+		}
+		return -1;
+	}	
+		
+	struct dirent *dir_cont = NULL;
+	while((dir_cont = readdir(dirp))){
+		if(strcmp(dir_cont->d_name,"..") == 0  ||
+			strcmp(dir_cont->d_name,".") == 0)
+			continue;
+
+		if(dir_cont->d_type == DT_REG){
+			if(unlink(dir_cont->d_name) == -1){
+				fprintf(stderr,"could not remove file %s.\n",dir_cont->d_name);
+				closedir(dirp);
+				if(chdir(cur_dir) != 0) {
+					fprintf(stderr,"can't change into %s.\n", cur_dir);
+					return -1;
+				}
+				return -1;
+			}
+		}else if(dir_cont->d_type == DT_DIR){
+			if(remove_directory(dir_cont->d_name) == -1){
+				fprintf(stderr,"could not empty %s.\n",path_dir);
+				closedir(dirp);
+				if(chdir(cur_dir) != 0) {
+					fprintf(stderr,"can't change into %s.\n", cur_dir);
+					return -1;
+				}
+				return -1;
+			}
+		} else {
+			if(unlink(dir_cont->d_name) == -1){
+				if(remove_directory(dir_cont->d_name) == -1 ){
+					fprintf(stderr,"could not delete %s.\n",dir_cont->d_name);
+					closedir(dirp);
+					if(chdir(cur_dir) != 0) {
+						fprintf(stderr,"can't change into %s.\n", path_dir);
+						return -1;
+					}
+
+					return -1;
+				}
+			}
+		}
+	}	
+
+	closedir(dirp);
+	if(rmdir(path_dir) == -1){
+		fprintf(stderr,"could't not delete %s.\n", path_dir);
+		if(chdir(cur_dir) != 0) {
+			fprintf(stderr,"can't change into %s.\n", path_dir);
+			return -1;
+		}
+		return -1;
+	}	
+	
+	if(chdir(cur_dir) != 0) {
+		fprintf(stderr,"can't change into %s.\n", path_dir);
+		return -1;
+	}
+
+	return 0;
+}
 int edit_group_user(char *username, char *group_name, int mod)
 {
 	unsigned char lock = 0;
 	int status = EXIT_SUCCESS;
 	int err = -1;
 	if(!group_exist(group_name)){
-		fprintf(stderr,"group does not exist.\n");
-		return -1;		
+		return ENONE_G ;		
 	}
 
 	if(!user_already_exist(username)) {
-		printf("user does not exist.\n");
 		return ENONE_U;	
 	}
 
@@ -1080,6 +1212,7 @@ static unsigned char user_already_exist(char *username)
 
 
 /*this fucntion is not being used as for now*/
+#if 0
 static unsigned char gen_random_bytes(char *buffer,int length)
 {
 	FILE *fp = fopen(RAN_DEV,"rb");
@@ -1098,6 +1231,8 @@ static unsigned char gen_random_bytes(char *buffer,int length)
 	return 1;
 
 }
+#endif /*comment out fucntion gen_random_bytes() */
+
 
 int crypt_pswd(char *paswd, char **hash)
 {
@@ -1338,8 +1473,8 @@ static int clean_up_file(char *username,char *file_name) {
 /* 
  * the mod parameter specify 
  * the mode as define in user_create.h
- * #define ADD_GU 0
- * #define DEL_GU 1
+ * #define ADD_GU 0 ADD USER TO THE GROUP
+ * #define DEL_GU 1 REMOVE USER TO THE GROUP
  * */
 static int add_entry_to_group_file( char *file_name, char *group_name, char *username, int mod)
 {
@@ -2174,7 +2309,6 @@ static int group_exist(char *group_name)
 	memset(line,0,column);
 	while(fgets(line,column,fp)){
 		if(strstr(line,group_name) != NULL ){
-			fprintf(stderr,"group already exist\n");
 			fclose(fp);
 			return 1;	
 		}
@@ -2184,4 +2318,15 @@ static int group_exist(char *group_name)
 
 	fclose(fp);
 	return 0;
+}
+
+static int directory_exist(char *path)
+{
+	struct stat stat_buf = {0};
+	errno = 0;
+	if(stat(path,&stat_buf) == -1){
+		return errno;
+	}
+
+	return S_ISDIR(stat_buf.st_mode);
 }

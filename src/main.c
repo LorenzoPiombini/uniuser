@@ -42,7 +42,7 @@ int main(int arg, char** argv)
 
 	fprintf(stdout,"%s: user %s, added.\n",Prog,username);
 	ret = 0;
-	if((ret = del_user(username)) != 0){
+	if((ret = del_user(username,DEL_FULL)) != 0){
 		switch(ret){
 		case ENONE_U: 
 			fprintf(stderr,"user does not exist.\n");
@@ -66,7 +66,6 @@ int main(int arg, char** argv)
 		default:
 			break;
 		}
-		fprintf(stderr,"can't add group.\n");
 	}else {
 		fprintf(stderr,"group added!\n");
 	}
@@ -82,6 +81,9 @@ int main(int arg, char** argv)
 			break;
 		case ENONE_GU:
 			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,username,group_name);
+			break;
+		case ENONE_G:
+			fprintf(stderr,"%s: group %s does not exist.\n",Prog,group_name);
 			break;
 		default:
 			break;

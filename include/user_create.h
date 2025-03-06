@@ -1,6 +1,10 @@
 #ifndef _USER_CREATE_H_
 #define _USER_CREATE_H_
 
+/*Safe directory to keep data of deleted users*/
+#define USER_DEL_DIR "/home/users_del" 
+
+
 
 /* files to open and to files acquire lock */
 #define SYS_PARAM "/etc/login.defs"
@@ -53,6 +57,7 @@
 #define ERR_GU 17 /*error in delating the group*/
 #define ENONE_GU 18 /*the user is not assign to this group */
 #define EALRDY_G 19 /*group already exist*/
+#define ENONE_G 20 /*the group  does not exist*/
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/
@@ -62,7 +67,14 @@
 /*mode: ADD or DELETE group from USERS*/
 #define ADD_GU 0
 #define DEL_GU 1
-
+/* 
+ * mode: DEL_FULL DELL_SAFE 
+ * DEL_FULL delete everything from the user 
+ * DEL_SAFE will delate the user but not the home directory.
+ *
+ * */ 
+#define DEL_FULL 2
+#define DEL_SAFE 3
 
 struct sys_param {
 	unsigned int PASS_MAX_DAYS;
@@ -83,7 +95,7 @@ int crypt_pswd(char *paswd, char **hash);
 int add_user(char *username, char *paswd);
 int login(char *username, char *passwd);
 int get_user_info(char *username, char **home_pth, int *uid);
-int del_user(char *username);
+int del_user(char *username, int mod);
 int create_group(char* group_name);
 int edit_group_user(char *username, char *group_name, int mod);
 
