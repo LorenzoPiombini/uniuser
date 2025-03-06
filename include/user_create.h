@@ -49,9 +49,19 @@
 #define ESUID 13 /*SUB_UID_MAX overflowed */
 #define ECHAR 13 /* passowrd contain KILL or ERASE system char */
 #define ENONE_U 14  /* user does not exist */
+#define EALRDY_GU 15 /*group already added to user*/
+#define ERR_GU 16 /*error in delating the group*/
+#define ENONE_GU 17 /*the user is not assign to this group */
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/
+
+
+
+/*mode: ADD or DELETE group from USERS*/
+#define ADD_GU 0
+#define DEL_GU 1
+
 
 struct sys_param {
 	unsigned int PASS_MAX_DAYS;
@@ -74,7 +84,7 @@ int login(char *username, char *passwd);
 int get_user_info(char *username, char **home_pth, int *uid);
 int del_user(char *username);
 int create_group(char* group_name);
-int add_group_to_user(char *username, char *group_name);
+int edit_group_user(char *username, char *group_name, int mod);
 
 
 

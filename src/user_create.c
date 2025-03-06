@@ -60,7 +60,7 @@ static int paswd_chk(char *passwrd);
 static int get_linux_distro();
 static int clean_home_dir(char *hm_path);
 static int get_save_pswd(char *username, char* hash);
-static int add_entry_to_group_file(char *file_name, char *group_name, char *username);
+static int add_entry_to_group_file( char *file_name, char *group_name, char *username, int mod);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -541,7 +541,7 @@ int del_user(char *username)
 	return EXIT_SUCCESS;
 }
 
-int add_group_to_user(char *username, char *group_name)
+int edit_group_user(char *username, char *group_name, int mod)
 {
 	unsigned char lock = 0;
 	int status = EXIT_SUCCESS;
@@ -575,10 +575,11 @@ int add_group_to_user(char *username, char *group_name)
 	
 	/* write the new entry to the files */
 	
-        if(add_entry_to_group_file(GP,group_name,username) == -1 ||
-			add_entry_to_group_file(G_SHADOW,group_name,username) == -1){
+	int group_result = 0;
+        if((group_result = add_entry_to_group_file(GP,group_name,username,mod)) != 0 ||
+			(group_result = add_entry_to_group_file(G_SHADOW,group_name,username,mod)) != 0){
 			fprintf(stderr,"can't add group %s to user %s.\n", group_name,username);
-			status = err;
+			status = group_result;
 			goto clean_on_exit;
 	}
 	
@@ -600,10 +601,10 @@ clean_on_exit:
 		}
 	}
 
-
 	return status;
 
 }
+
 int create_group(char* group_name)
 {
 	/* we need to write entry to
@@ -1004,10 +1005,10 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 {
 	unsigned int sub_uid = 0;
-    if(uid == 999) {
-        sub_uid = 100000;    
-	    return sub_uid;
-    }
+	if(uid == 999) {
+	        sub_uid = 100000;    
+		return sub_uid;
+	}
 
 	FILE *fp = fopen(SUB_UID,"r");
 	if(!fp) {
@@ -1078,6 +1079,8 @@ static unsigned char user_already_exist(char *username)
 	return 0;
 }
 
+
+/*this fucntion is not being used as for now*/
 static unsigned char gen_random_bytes(char *buffer,int length)
 {
 	FILE *fp = fopen(RAN_DEV,"rb");
@@ -1333,9 +1336,16 @@ static int clean_up_file(char *username,char *file_name) {
 	return 0; /* success*/ 
 }
 
-static int add_entry_to_group_file( char *file_name, char *group_name, char *username)
+/* 
+ * the mod parameter specify 
+ * the mode as define in user_create.h
+ * #define ADD_GU 0
+ * #define DEL_GU 1
+ * */
+static int add_entry_to_group_file( char *file_name, char *group_name, char *username, int mod)
 {
 
+	int status = EXIT_SUCCESS;
 	FILE *fp = fopen(file_name,"r");
 	if(!fp){
 		fprintf(stderr,"can't open file %s.\n",GP);
@@ -1359,22 +1369,120 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 			fputs(buffer,tmp);
 		}else{
 
-			/*find end of the line*/
-			int i;
-			for(i = 0; buffer[i] != '\n'; i++);
 
-			/*apend the username to the group */
-			size_t l = strlen(username);
-			if(buffer[i-1] == ':'){
-				strncpy(&buffer[i],username,l);
-				buffer[i+l] = '\n';
-				fputs(buffer,tmp);
+			switch(mod){
+			case ADD_GU:
+			{
+				if(strstr(buffer,username) != NULL){
+					status = EALRDY_GU; 
+					fputs(buffer,tmp);
+					break;
+				}
+				/*find end of the line*/
+				int i;
+				for(i = 0; buffer[i] != '\n'; i++);
 
-			} else {
-				buffer[i] = ',';
-				strncpy(&buffer[i+1],username,l);
-				buffer[i+1+l] = '\n';
+				/*apend the username to the group */
+				size_t l = strlen(username);
+				if(buffer[i-1] == ':'){
+					strncpy(&buffer[i],username,l);
+					buffer[i+l] = '\n';
+					fputs(buffer,tmp);
+
+				} else {
+					buffer[i] = ',';
+					strncpy(&buffer[i+1],username,l);
+					buffer[i+1+l] = '\n';
+					fputs(buffer,tmp);
+				}
+				break;
+			}
+			case DEL_GU:
+			{
+				if(strstr(buffer,username) == NULL){
+					status = ENONE_GU; 
+					fputs(buffer,tmp);
+					break;
+				}
+				/*find the last ':'*/
+				int i;
+				int counter = 0;
+				int pos;
+				for(i = 0; counter < 3; i++){
+					if(buffer[i] == ':'){ 
+						counter++;
+						pos = i;
+					} 
+				}
+				char *users = strdup(&buffer[pos+1]);
+				if(!users){
+					/*
+					 * if strdup failes we do not modify the file
+					 * we just leave the old contentin place to avoid
+					 * data corruption
+					 * */
+					fprintf(stderr,"can't delete the group %s, for user %s.\n",group_name,username);
+					fputs(buffer,tmp);
+					status = ERR_GU; 
+					break;
+				}
+
+				size_t len = strlen(users);
+				char new_entry[len];
+				memset(new_entry,0,len);
+				char *s = strtok(users,",");
+				if(!s) {
+					/*
+					 * if strtok failes we do not modify the file
+					 * we just leave the old content in place to avoid
+					 * data corruption
+					 * */
+					fprintf(stderr,"can't delete the group %s, for user %s.\n",group_name,username);
+					fputs(buffer,tmp);
+					free(users);
+					status = ERR_GU; 
+					break;
+				}
+
+				size_t username_l = strlen(username);
+				size_t old_l = 0;
+				do{
+					size_t toke_l = strlen(s);
+					if(strlen(s) == username_l) {
+						if(strncmp(username,s,username_l) != 0){
+							if(old_l == 0){
+								strncpy(new_entry,s,toke_l);
+							}else{
+								strncpy(&new_entry[old_l+1],s,toke_l);
+							}
+							old_l += toke_l;
+							new_entry[old_l] = ',';
+
+						}
+					}else{
+						if(old_l == 0){
+							strncpy(new_entry,s,toke_l);
+						}else{
+							strncpy(&new_entry[old_l+1],s,toke_l);
+						}
+						old_l += toke_l;
+						new_entry[old_l] = ',';
+					}
+				}while((s = strtok(NULL,",")));
+
+				new_entry[old_l] = '\n';
+				/*zero out the rest of the buffer (line)*/
+				memset(&buffer[pos+1],0,strlen(&buffer[pos+1]));
+				/*copy the new users to the buffer*/
+				strncpy(&buffer[pos+1],new_entry,strlen(new_entry));
+				/*write the new entry to tmp file*/ 
 				fputs(buffer,tmp);
+				free(users);
+				
+				break;
+			}
+			default:
+				break;
 			}
 		}
 
@@ -1394,7 +1502,7 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 		return -1;
 	}
 
-	return 0; /* success*/ 
+	return status; 
 
 }
 

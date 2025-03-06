@@ -36,6 +36,8 @@ int main(int arg, char** argv)
 	if(del_user(username) == -1){
 		fprintf(stdout,"del_user() failed.\n");
 		return EXIT_FAILURE;
+	}else{
+		fprintf(stdout,"user %s, deleted.\n",username);
 	}
 
 	if(create_group("isThisAGroup?") == -1){
@@ -44,11 +46,12 @@ int main(int arg, char** argv)
 		fprintf(stderr,"group added!\n");
 	}
 
-	if(add_group_to_user("Kings","isThisAGroup?") == -1){
-		printf("add user to group failed.\n");
+	int err = 0;
+	if((err = edit_group_user("Kings","isThisAGroup?",DEL_GU)) != 0){
+		printf("add user to group failed with error %d.\n",err);
 	} else {
-		printf("group added to user!");
+		printf("group deleted from user!");
 	}
-	fprintf(stdout,"user %s, deleted.\n",username);
+
 	return EXIT_SUCCESS;
 }
