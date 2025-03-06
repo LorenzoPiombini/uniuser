@@ -47,11 +47,12 @@
 #define EALRDY_U 11 /*user already exist*/
 #define ESGID 12 /*SUB_GID_MAX overflowed */
 #define ESUID 13 /*SUB_UID_MAX overflowed */
-#define ECHAR 13 /* passowrd contain KILL or ERASE system char */
-#define ENONE_U 14  /* user does not exist */
-#define EALRDY_GU 15 /*group already added to user*/
-#define ERR_GU 16 /*error in delating the group*/
-#define ENONE_GU 17 /*the user is not assign to this group */
+#define ECHAR 14 /* passowrd contain KILL or ERASE system char */
+#define ENONE_U 15  /* user does not exist */
+#define EALRDY_GU 16 /*group already added to user*/
+#define ERR_GU 17 /*error in delating the group*/
+#define ENONE_GU 18 /*the user is not assign to this group */
+#define EALRDY_G 19 /*group already exist*/
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/

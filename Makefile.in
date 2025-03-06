@@ -5,7 +5,7 @@ OBJ_PROD = $(patsubst src/%.c, obj/%_prod.o, $(SRC))
 OBJlibuser = obj/user_create.o
 OBJlibuserPR = obj/user_create_prod.o
 
-LIBNAMEuser = user
+LIBNAMEuser = uniuser
 LIBDIR = /usr/local/lib
 INCLUDEDIR = /usr/local/include
 SHAREDLIBuser = lib$(LIBNAMEuser).so

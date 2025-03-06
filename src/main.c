@@ -17,30 +17,75 @@ int main(int arg, char** argv)
 
 	int ret = add_user(username,password);
 	if(ret < 1000) {
-		fprintf(stderr,
-                "%s: adding user failed!\n",
-                Prog);
+		switch(ret) {
+		case EMAX_U:  
+			fprintf(stderr,"exeed the maximum user number.\n");
+			break;
+		case EALRDY_U: 
+			fprintf(stderr,"user already exist.\n");
+		        break;
+		case ESGID: 
+			fprintf(stderr,"SUB_GID_MAX overflowed.\n");
+			break;
+		case ESUID: 
+			fprintf(stderr,"SUB_UID_MAX overflowed.\n");
+			break;
+		case ECHAR: 
+			fprintf(stderr,"passowrd contain KILL or ERASE system char.\n");
+			break;
+		default:
+			break;
+		}
+		fprintf(stderr,"%s: adding user failed!\n",Prog);
 		return EXIT_FAILURE;
 	}
 
-	fprintf(stdout,"user %s, added.\n",username);
-
-	if(del_user(username) == -1){
-		fprintf(stdout,"del_user() failed.\n");
+	fprintf(stdout,"%s: user %s, added.\n",Prog,username);
+	ret = 0;
+	if((ret = del_user(username)) != 0){
+		switch(ret){
+		case ENONE_U: 
+			fprintf(stderr,"user does not exist.\n");
+			break;
+		default:
+			break;
+		}
+		fprintf(stdout,"%s: del_user() failed.\n",Prog);
 		return EXIT_FAILURE;
 	}else{
 		fprintf(stdout,"user %s, deleted.\n",username);
 	}
 
-	if(create_group("isThisAGroup?") == -1){
+	ret = 0;
+	char *group_name = "isThisAGroup?";
+	if((ret = create_group(group_name)) != 0){
+		switch(ret) {
+		case EALRDY_G: 
+			fprintf(stderr,"group already exist\n");
+			break;
+		default:
+			break;
+		}
 		fprintf(stderr,"can't add group.\n");
 	}else {
 		fprintf(stderr,"group added!\n");
 	}
 
-	int err = 0;
-	if((err = edit_group_user("Kings","isThisAGroup?",DEL_GU)) != 0){
-		printf("add user to group failed with error %d.\n",err);
+	ret = 0;
+	if((ret = edit_group_user(username,group_name,DEL_GU)) != 0){
+		switch(ret) {
+		case ENONE_U:
+			fprintf(stderr,"user does not exist.\n");
+			break;
+		case ERR_GU:
+			fprintf(stderr,"DEL_GU failed.\n");
+			break;
+		case ENONE_GU:
+			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,username,group_name);
+			break;
+		default:
+			break;
+		}
 	} else {
 		printf("group deleted from user!");
 	}

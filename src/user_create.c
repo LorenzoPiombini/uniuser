@@ -503,7 +503,6 @@ int del_user(char *username)
 
 	/*check if the user exists */
 	if(!user_already_exist(username)) {
-		printf("user does not exist.\n");
 		return ENONE_U;	
 	}
 
@@ -553,7 +552,7 @@ int edit_group_user(char *username, char *group_name, int mod)
 
 	if(!user_already_exist(username)) {
 		printf("user does not exist.\n");
-		return EALRDY_U;	
+		return ENONE_U;	
 	}
 
 	/*
@@ -618,7 +617,7 @@ int create_group(char* group_name)
 	int status = EXIT_SUCCESS;
 	int err = -1;
 	if(group_exist(group_name)){
-		return -1;		
+		return EALRDY_G;		
 	}
 	/* 
 	* changing to root user, if the program is not run by root 
@@ -1368,8 +1367,6 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 		if(strstr(buffer,group_name) == NULL) {
 			fputs(buffer,tmp);
 		}else{
-
-
 			switch(mod){
 			case ADD_GU:
 			{
@@ -2177,7 +2174,7 @@ static int group_exist(char *group_name)
 	memset(line,0,column);
 	while(fgets(line,column,fp)){
 		if(strstr(line,group_name) != NULL ){
-			fprintf(stderr,"group_already_exist\n");
+			fprintf(stderr,"group already exist\n");
 			fclose(fp);
 			return 1;	
 		}
