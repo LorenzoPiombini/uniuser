@@ -1,11 +1,14 @@
 # libuser - A Small User Management Library for Linux
 
-`libuser` is a lightweight C library designed to programmatically manage users on a Linux operating system. It provides a simple function, `add_user(char *username, char *password)`, allowing you to create users securely without relying on shell exposure or risky system calls like `system()`, `popen()`, or the `exec` family.
+`libuser` is a lightweight C library designed to programmatically manage users on a Linux operating system. It provides a simple function, `add_user(char *username, char *password)`,  
+allowing you to create users securely without relying on shell exposure or risky system calls like `system()`, `popen()`, or the `exec` family.
 
 ## Features
 - Add users programmatically with `add_user()`.
 - Avoids unsafe shell interactions for better security.
-- Includes additional utilities like `del_user()`, `create_group()`, and `add_group_to_user()` (see `main.c` for examples).
+- Includes additional utilities like `del_user()`, `create_group()`, and `edit_group_user()` (see [main.c] for examples).
+
+[main.c]: src/main.c 
 - Comes with a test program, `user_manager`, to demonstrate functionality.
 
 ## Prerequisites
