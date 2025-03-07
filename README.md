@@ -27,6 +27,7 @@ int del_user(char *username, int mod);
 int create_group(char* group_name);
 int del_group(char *group_name);
 int edit_group_user(char *username, char *group_name, int mod);
+int paswd_chk(char *passwrd,int rules);
 ```
 
 ## Prerequisites
@@ -83,4 +84,31 @@ int main(void) {
 
 Values < 1000 indicate an error.
 
+## Security
+
+the library comes with builtin checks for the password, by default the password provided won't be checked  
+against any of this criteria, you can use the `paswd_chk()` like this: 
+
+```c
+	int p_chk = paswd_chk(paswd,RULE_ON);
+	if(p_chk == 0 || p_chk == -1) {
+		fprintf(stderr,"password does not meet security criteria.\n");
+		return -1;	
+	} else if (p_chk == ECHAR) {
+		fprintf(stderr,"password contains invalid characters.\n");
+		return -1;
+	}
+
+```
+
+the code snipped checks for a password that must meet the following: 
+    - 8 charatter long
+    - one capital letter
+    - one special charatter(like @)
+    - contain a number
+
+the function checks also if you have the password contains kill or erase chars  
+you can turn off this security criteria by passing to the `paswd_chk()` endpoint the parameter RULE_OFF  
+this way the program will check only for kill char `^U` or erase char `^?` which they might create problems if you
+decide to echo passwords, or in some embended systems.  
 
