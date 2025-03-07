@@ -112,7 +112,7 @@ against any of this criteria, you can use the `pswd_chk()` like this:
 
 ```
 
-the code snipped checks for a password that must meet the following: 
+the code snipped checks for a password that must meet the following:   
     - 8 character long
     - one capital letter
     - one special character (like @)
