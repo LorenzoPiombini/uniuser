@@ -1,5 +1,5 @@
-#ifndef _USER_CREATE_H_
-#define _USER_CREATE_H_
+#ifndef _UNIUSER_H_
+#define _UNIUSER_H_
 
 /*Safe directory to keep data of deleted users*/
 #define USER_DEL_DIR "/home/users_del" 
@@ -91,14 +91,16 @@ struct sys_param {
 	char *ENCRYPT_METHOD;
 };
 
+/* the API available with this library*/
 int crypt_pswd(char *paswd, char **hash);
 int add_user(char *username, char *paswd);
 int login(char *username, char *passwd);
 int get_user_info(char *username, char **home_pth, int *uid);
 int del_user(char *username, int mod);
 int create_group(char* group_name);
+int del_group(char *group_name);
 int edit_group_user(char *username, char *group_name, int mod);
 
 
 
-#endif /* user_create.h */
+#endif /* uniuser.h */

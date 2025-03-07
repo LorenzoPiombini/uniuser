@@ -2,8 +2,8 @@ TARGET = user_manager
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 OBJ_PROD = $(patsubst src/%.c, obj/%_prod.o, $(SRC))
-OBJlibuser = obj/user_create.o
-OBJlibuserPR = obj/user_create_prod.o
+OBJlibuser = obj/uniuser.o
+OBJlibuserPR = obj/uniuser_prod.o
 
 LIBNAMEuser = uniuser
 LIBDIR = /usr/local/lib
@@ -17,7 +17,7 @@ prod:$(TARGET)_prod
 clean:
 	sudo rm -r obj/*.o
 	rm $(TARGET)
-	rm -f $(INCLUDEDIR)/user_create.h
+	rm -f $(INCLUDEDIR)/uniuser.h
 	rm -f $(LIBDIR)/$(LIBNAMEuser)
 
 object-dir:
@@ -67,7 +67,7 @@ obj/%_prod.o:src/%.c
 
 install:
 	install -d $(INCLUDEDIR)
-	install -m 644 include/user_create.h $(INCLUDEDIR)
+	install -m 644 include/uniuser.h $(INCLUDEDIR)
 	install -m 755 $(SHAREDLIBuser) $(LIBDIR)
 	ldconfig
 

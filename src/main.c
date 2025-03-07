@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "user_create.h"
+#include "uniuser.h"
 
 int main(int arg, char** argv)
 {
@@ -42,7 +42,7 @@ int main(int arg, char** argv)
 
 	fprintf(stdout,"%s: user %s, added.\n",Prog,username);
 	ret = 0;
-	if((ret = del_user(username,DEL_FULL)) != 0){
+	if((ret = del_user(username,DEL_SAFE)) != 0){
 		switch(ret){
 		case ENONE_U: 
 			fprintf(stderr,"user does not exist.\n");
@@ -57,7 +57,7 @@ int main(int arg, char** argv)
 	}
 
 	ret = 0;
-	char *group_name = "isThisAGroup?";
+	char *group_name = "isThisANEWnewGroup?";
 	if((ret = create_group(group_name)) != 0){
 		switch(ret) {
 		case EALRDY_G: 

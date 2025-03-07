@@ -20,7 +20,7 @@
 #include <ctype.h>
 #include <termios.h>
 #include <dirent.h>
-#include "user_create.h"
+#include "uniuser.h"
 /*
  *  modify this files to create a new user 
  *	etc/group
@@ -131,6 +131,13 @@ int login(char *username, char *passwd)
         free(hash);
         return EXIT_SUCCESS;
 }
+
+/*
+ * this function retrive the password saved in the database
+ * and compare it to the one provided from the users
+ * if returns 0 it means the user is authenticated
+ *
+ * */
 
 static int get_save_pswd(char *username, char *hash)
 {
@@ -563,7 +570,14 @@ int del_user(char *username, int mod)
 				return -1;			
 			}
 
-			rename(pw->pw_dir,new_dir_path);
+			if(directory_exist(new_dir_path)){
+				if(remove_directory(pw->pw_dir) == -1){
+					return -1;
+				}
+				
+			} else {
+				rename(pw->pw_dir,new_dir_path);
+			}
 		}else{
 			if(mkdir(USER_DEL_DIR,S_IRWXU) == -1){
 				fprintf(stderr,"cannot create %s direcotry.\n",USER_DEL_DIR);
@@ -591,89 +605,63 @@ int del_user(char *username, int mod)
 	return EXIT_SUCCESS;
 }
 
-static int remove_directory(char *path_dir)
+
+int del_group(char *group_name)
 {
-	/*get current directory */
-	char cur_dir[500];
-	if(getcwd(cur_dir,500) == NULL){
-		fprintf(stderr,"can't get current directory");
+	unsigned char lock = 0;
+	int status = EXIT_SUCCESS;
+	int err = -1;
+	if(!group_exist(group_name)){
+		return ENONE_G;		
+	}
+
+	/* 
+	* changing to root user, if the program is not run by root 
+	* or with root privilegies the function will fail
+	* */
+
+	if(setuid(0) == -1) {
+		fprintf(stderr,"permission denied.\n");
 		return -1;
 	}
+
+	if(lock_file(G_SHADOW_LCK) == -1 ||
+			lock_file(GP_LCK) == -1){
+		fprintf(stderr,"cannot acquire lock on files.\n");
+		return -1;	
+	}
+
+	lock = 1;
 	
-	if(chdir(path_dir) != 0) {
-		fprintf(stderr,"can't change into %s.\n", path_dir);
-		return -1;
+	if(clean_up_file(group_name,GP) == -1 ||
+		   clean_up_file(group_name,G_SHADOW) == -1){
+		fprintf(stderr, "cannot remove group.\n");
+		status = err;
+		goto clean_on_exit;
 	}
 
-	DIR *dirp = opendir(path_dir);
-	if(!dirp) {
-		fprintf(stderr,"can't remove directory %s.\n",path_dir);
-		if(chdir(cur_dir) != 0) {
-			fprintf(stderr,"can't change into %s.\n", cur_dir);
-			return -1;
-		}
-		return -1;
-	}	
-		
-	struct dirent *dir_cont = NULL;
-	while((dir_cont = readdir(dirp))){
-		if(strcmp(dir_cont->d_name,"..") == 0  ||
-			strcmp(dir_cont->d_name,".") == 0)
-			continue;
-
-		if(dir_cont->d_type == DT_REG){
-			if(unlink(dir_cont->d_name) == -1){
-				fprintf(stderr,"could not remove file %s.\n",dir_cont->d_name);
-				closedir(dirp);
-				if(chdir(cur_dir) != 0) {
-					fprintf(stderr,"can't change into %s.\n", cur_dir);
-					return -1;
-				}
-				return -1;
-			}
-		}else if(dir_cont->d_type == DT_DIR){
-			if(remove_directory(dir_cont->d_name) == -1){
-				fprintf(stderr,"could not empty %s.\n",path_dir);
-				closedir(dirp);
-				if(chdir(cur_dir) != 0) {
-					fprintf(stderr,"can't change into %s.\n", cur_dir);
-					return -1;
-				}
-				return -1;
-			}
-		} else {
-			if(unlink(dir_cont->d_name) == -1){
-				if(remove_directory(dir_cont->d_name) == -1 ){
-					fprintf(stderr,"could not delete %s.\n",dir_cont->d_name);
-					closedir(dirp);
-					if(chdir(cur_dir) != 0) {
-						fprintf(stderr,"can't change into %s.\n", path_dir);
-						return -1;
-					}
-
-					return -1;
-				}
-			}
-		}
-	}	
-
-	closedir(dirp);
-	if(rmdir(path_dir) == -1){
-		fprintf(stderr,"could't not delete %s.\n", path_dir);
-		if(chdir(cur_dir) != 0) {
-			fprintf(stderr,"can't change into %s.\n", path_dir);
-			return -1;
-		}
-		return -1;
-	}	
-	
-	if(chdir(cur_dir) != 0) {
-		fprintf(stderr,"can't change into %s.\n", path_dir);
-		return -1;
+	if(unlock_file(G_SHADOW_LCK) == -1 ||
+		unlock_file(GP_LCK) == -1){
+		fprintf(stderr,"can't release lock or lock not acquired.\n");
+		status = err;
+		goto clean_on_exit;
 	}
 
-	return 0;
+	lock = 0;
+
+
+clean_on_exit:
+	if(lock){
+		if(unlock_file(G_SHADOW_LCK) == -1 ||
+				unlock_file(GP_LCK) == -1){
+			fprintf(stderr,"can't release lock or lock not acquired.\n");
+			status = err;
+		}
+	}
+
+	return status;
 }
+
 int edit_group_user(char *username, char *group_name, int mod)
 {
 	unsigned char lock = 0;
@@ -2105,8 +2093,7 @@ static int lock_files()
 }
 static int unlock_files()
 {
-	if(
-	   (unlock_file(SHADOW_LCK) == -1)	||
+	if((unlock_file(SHADOW_LCK) == -1)	||
 	   (unlock_file(GP_LCK) == -1)		||
 	   (unlock_file(G_SHADOW_LCK) == -1)	||
 	   (unlock_file(PASSWD_LCK) == -1)	||
@@ -2325,8 +2312,92 @@ static int directory_exist(char *path)
 	struct stat stat_buf = {0};
 	errno = 0;
 	if(stat(path,&stat_buf) == -1){
-		return errno;
+		return 0; /*false*/
 	}
 
 	return S_ISDIR(stat_buf.st_mode);
 }
+static int remove_directory(char *path_dir)
+{
+	/*get current directory */
+	char cur_dir[500];
+	if(getcwd(cur_dir,500) == NULL){
+		fprintf(stderr,"can't get current directory");
+		return -1;
+	}
+	
+	if(chdir(path_dir) != 0) {
+		fprintf(stderr,"can't change into %s.\n", path_dir);
+		return -1;
+	}
+
+	DIR *dirp = opendir(path_dir);
+	if(!dirp) {
+		fprintf(stderr,"can't remove directory %s.\n",path_dir);
+		if(chdir(cur_dir) != 0) {
+			fprintf(stderr,"can't change into %s.\n", cur_dir);
+			return -1;
+		}
+		return -1;
+	}	
+		
+	struct dirent *dir_cont = NULL;
+	while((dir_cont = readdir(dirp))){
+		if(strcmp(dir_cont->d_name,"..") == 0  ||
+			strcmp(dir_cont->d_name,".") == 0)
+			continue;
+
+		if(dir_cont->d_type == DT_REG){
+			if(unlink(dir_cont->d_name) == -1){
+				fprintf(stderr,"could not remove file %s.\n",dir_cont->d_name);
+				closedir(dirp);
+				if(chdir(cur_dir) != 0) {
+					fprintf(stderr,"can't change into %s.\n", cur_dir);
+					return -1;
+				}
+				return -1;
+			}
+		}else if(dir_cont->d_type == DT_DIR){
+			if(remove_directory(dir_cont->d_name) == -1){
+				fprintf(stderr,"could not empty %s.\n",path_dir);
+				closedir(dirp);
+				if(chdir(cur_dir) != 0) {
+					fprintf(stderr,"can't change into %s.\n", cur_dir);
+					return -1;
+				}
+				return -1;
+			}
+		} else {
+			if(unlink(dir_cont->d_name) == -1){
+				if(remove_directory(dir_cont->d_name) == -1 ){
+					fprintf(stderr,"could not delete %s.\n",dir_cont->d_name);
+					closedir(dirp);
+					if(chdir(cur_dir) != 0) {
+						fprintf(stderr,"can't change into %s.\n", path_dir);
+						return -1;
+					}
+
+					return -1;
+				}
+			}
+		}
+	}	
+
+	closedir(dirp);
+	if(rmdir(path_dir) == -1){
+		fprintf(stderr,"could't not delete %s.\n", path_dir);
+		if(chdir(cur_dir) != 0) {
+			fprintf(stderr,"can't change into %s.\n", path_dir);
+			return -1;
+		}
+		return -1;
+	}	
+	
+	if(chdir(cur_dir) != 0) {
+		fprintf(stderr,"can't change into %s.\n", path_dir);
+		return -1;
+	}
+
+	return 0;
+}
+
