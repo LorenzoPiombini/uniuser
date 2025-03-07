@@ -62,6 +62,8 @@ static int get_save_pswd(char *username, char* hash);
 static int add_entry_to_group_file( char *file_name, char *group_name, char *username, int mod);
 static int directory_exist(char *path);
 static int remove_directory(char *path_dir);
+static int is_user_admin(char* username);
+
 
 
 #if !HAVE_LIBSTROP
@@ -1424,9 +1426,31 @@ static int clean_up_file(char *username,char *file_name) {
 	memset(buffer,0,buf_size);
 	
 	while(fgets(buffer,buf_size,fp)) {
+
 		if(strstr(buffer,username) == NULL) {
 			fputs(buffer,tmp);
 			memset(buffer,0,buf_size);
+		}else if(strstr(buffer,username) != NULL){
+		
+			char* buf_cpy = strdup(buffer);
+			if(!buf_cpy){
+				fclose(fp);
+				fprintf(stderr,"strdup failed %s:%d",__FILE__,__LINE__-3);
+				return -1;
+			}
+			char *t = strtok(buffer,":");
+			if(!t){
+				fclose(fp);
+				fprintf(stderr,"strtok failed %s:%d",__FILE__,__LINE__-3);
+				return -1;
+			}
+
+			if(strncmp(username,t,strlen(t)) != 0){
+				fputs(buffer,tmp);
+				free(buf_cpy);
+			}else{
+				free(buf_cpy);
+			}
 		}
 		memset(buffer,0,buf_size);
 	}
@@ -2263,7 +2287,7 @@ static int clean_home_dir(char *hm_path)
 }
 
 
-int get_user_info(char *username, char **home_pth, int *uid)
+int get_user_info(char *username, char **home_pth, int *uid, int *is_admin)
 {
 	struct passwd *pw = getpwnam(username);
 	if(!pw) {
@@ -2272,11 +2296,74 @@ int get_user_info(char *username, char **home_pth, int *uid)
 		return -1;
 	}
 
-	(*home_pth) = strdup(pw->pw_dir);
-	*uid = pw->pw_uid;
+	if(home_pth){
+		(*home_pth) = strdup(pw->pw_dir);
+		if(!(*home_pth)){
+			return -1;
+		}
+	}
+
+	if(uid){
+		*uid = pw->pw_uid;
+	}
+
+	if(is_admin){
+		*is_admin = is_user_admin(username);	
+	}
+
 	return 0;
 }
 
+int list_group(char *username, char **list)
+{
+	FILE *fp = fopen(GP,"r");
+	if(!fp){
+		fprintf(stderr,"can't open %s.\n",GP);
+		return -1;
+	}
+
+	int column = 500;
+	char line[column];
+	memset(line,0,column);
+	*list = malloc(500);
+	if(!(*list)){
+		fprintf(stderr,"malloc failed");
+		return -1;	
+	}
+
+	memset(*list,0,500);
+	size_t len = 0;
+	while(fgets(line,column,fp)){
+			if(strstr(line,username) != NULL){
+				char* s = strtok(line,":");
+				if(!s){
+					fprintf(stderr,"strtok failed\n");
+					free(*list);
+					return -1;
+				}
+
+				if(len == 0){
+					len = strlen(s);
+					strncpy(*list,s,len);
+					(*list)[len] = ',';
+				}else {
+					size_t temp = strlen(s);
+					if(len < 500 && ((len + temp) < 500 )){
+						strncpy(&(*list)[len+1],s,temp);
+						len += temp;
+						(*list)[len] = ',';
+					}
+				}
+							
+
+			}
+	}
+
+	/*eliminate the last ','*/
+	(*list)[len] = '\0';
+	fclose(fp);
+	return 0;
+}
 
 static int group_exist(char *group_name)
 {
@@ -2396,3 +2483,42 @@ static int remove_directory(char *path_dir)
 	return 0;
 }
 
+static int is_user_admin(char* username)
+{
+	FILE *fp = fopen(GP,"r");
+	if(!fp){
+		fprintf(stderr,"can't read %s.\n",GP);
+		return -1;	
+	}
+
+	int columns = 500;
+	char line[columns];
+	memset(line,0,columns);
+
+
+	while(fgets(line,columns,fp)){
+		if(strstr(line,SUDO) != NULL) {
+			if(strstr(line,username) != NULL){
+				fclose(fp);
+				return 1;
+			}
+			memset(line,0,columns);
+			continue;
+		}
+		
+		if(strstr(line,ADMIN) != NULL) {
+			if(strstr(line,username) != NULL){
+				fclose(fp);
+				return 1;
+			}
+			memset(line,0,columns);
+			continue;
+		}
+
+		memset(line,0,columns);
+	}
+
+	fclose(fp);
+	return 0;
+
+}

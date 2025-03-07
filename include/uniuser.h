@@ -80,6 +80,11 @@
 #define DEL_FULL 2
 #define DEL_SAFE 3
 
+#define ADMIN "root"
+#define SUDO "sudo"
+
+
+
 struct sys_param {
 	unsigned int PASS_MAX_DAYS;
 	unsigned int PASS_MIN_DAYS;
@@ -99,12 +104,13 @@ struct sys_param {
 int crypt_pswd(char *paswd, char **hash);
 int add_user(char *username, char *paswd);
 int login(char *username, char *passwd);
-int get_user_info(char *username, char **home_pth, int *uid);
+int get_user_info(char *username, char **home_pth, int *uid, int *is_admin);
 int del_user(char *username, int mod);
 int create_group(char* group_name);
 int del_group(char *group_name);
 int edit_group_user(char *username, char *group_name, int mod);
 int paswd_chk(char *passwrd,int rules);
+int list_group(char *username, char **list);
 
 
 
