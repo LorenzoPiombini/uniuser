@@ -5,17 +5,19 @@
 int main(int arg, char** argv)
 {
     char Prog[] = "user_manager";
-    if(arg < 3 || arg > 3) {
+    if(arg < 3 || arg > 4) {
         fprintf(stderr,
-                "Usage: ./%s [username] [password]\n",
-                Prog);
+                "Usage: ./%s [username] [password] (full name)\nfull name is optional,\n",Prog);
         return EXIT_FAILURE;
     }
 
     char* username = argv[1];
     char* password = argv[2];
+    char* full_name = NULL;
+    if(arg == 4)
+	    full_name = argv[3];
 
-	int ret = add_user(username,password);
+	int ret = add_user(username,password,full_name);
 	if(ret < 1000) {
 		switch(ret) {
 		case EMAX_U:  

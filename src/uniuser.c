@@ -48,7 +48,7 @@ static int unlock_file(char *file_name);
 static int unlock_files();
 static int write_file(char *file_name, char *entry, size_t entry_size, char *username);
 static int shdw_write(char *username, char *hash, struct sys_param *param);
-static int psdw_write(char *username, int uid);
+static int psdw_write(char *username, int uid, char* full_name);
 static int group_write(char *username, int uid);
 static int gshdw_write(char *username);
 static int subuid_write(char *username, unsigned int sub_uid, int count);
@@ -168,7 +168,7 @@ static int get_save_pswd(char *username, char *hash)
 
 }
 
-int add_user(char *username, char *paswd)
+int add_user(char *username, char *paswd, char *full_name)
 {
 	if(user_already_exist(username)) {
 		printf("user already exist.\n");
@@ -302,17 +302,34 @@ int add_user(char *username, char *paswd)
      *  already written to avoid partial users data and to ensure
      *  data consistency
      * */
-	if(!psdw_write(username,uid)) {
-		fprintf(stderr,
-				"psdw_write() failed, %s:%d.\n",
-				__FILE__,__LINE__-3);
-		status = err;
-		if(clean_up_file(username,SHADOW) == -1) {
+
+	if(full_name){
+		if(!psdw_write(username,uid,full_name)) {
 			fprintf(stderr,
-					"clean up files failed. %s:%d.\n",
-					__FILE__,__LINE__);
+					"psdw_write() failed, %s:%d.\n",
+					__FILE__,__LINE__-3);
+			status = err;
+			if(clean_up_file(username,SHADOW) == -1) {
+				fprintf(stderr,
+						"clean up files failed. %s:%d.\n",
+						__FILE__,__LINE__);
+			}
+			goto clean_on_exit;
 		}
-		goto clean_on_exit;
+	}else{
+		if(!psdw_write(username,uid,NULL)) {
+			fprintf(stderr,
+					"psdw_write() failed, %s:%d.\n",
+					__FILE__,__LINE__-3);
+			status = err;
+			if(clean_up_file(username,SHADOW) == -1) {
+				fprintf(stderr,
+						"clean up files failed. %s:%d.\n",
+						__FILE__,__LINE__);
+			}
+			goto clean_on_exit;
+		}
+
 	}
 
 	if(!group_write(username,uid)) {
@@ -1356,7 +1373,7 @@ static int shdw_write(char *username, char *hash, struct sys_param *param)
 	return 1;
 }
 
-static int psdw_write(char *username, int uid)
+static int psdw_write(char *username, int uid, char* full_name)
 {	
 	size_t hm_pth_l = strlen(hm) + strlen(username) + 2;
 	char home_path[hm_pth_l];
@@ -1369,28 +1386,48 @@ static int psdw_write(char *username, int uid)
 		return 0;
 	}
 
+	size_t passwd_entry_length = 0; 
+	
+	if(full_name){
+
+	passwd_entry_length = strlen(username) + hm_pth_l +\
+				    (number_of_digit(uid)*2) + strlen(bsh)+\
+				    strlen(full_name) + 6 + 1 + 1 + 1;
+	}else {
 	/*
 	 * 6 number of colons
 	 * 1 for the x in password field
-     * 1 for '\n'
+	 * 1 for '\n'
 	 * 1 for '\0'
 	 **/
-	size_t passwd_entry_length = strlen(username) + hm_pth_l +	\
+	passwd_entry_length = strlen(username) + hm_pth_l +\
 				    (number_of_digit(uid)*2) + strlen(bsh)+\
 				    6 + 1 + 1 + 1;
-	
+	}
+
 	char passwd_entry[passwd_entry_length];
 	memset(passwd_entry,0,passwd_entry_length);
 
-	if(snprintf(passwd_entry,passwd_entry_length,
-				"%s:x:%d:%d::%s:%s\n",
-				username,uid,uid,home_path,bsh) < 0) {
-		fprintf(stderr,
-				"snprintf() failed , %s:%d.\n",
-				__FILE__,__LINE__-5);
-		return 0;
-	}
+	if(full_name){
+		if(snprintf(passwd_entry,passwd_entry_length,
+					"%s:x:%d:%d:%s:%s:%s\n",
+					username,uid,uid,full_name,home_path,bsh) < 0) {
+			fprintf(stderr,
+					"snprintf() failed , %s:%d.\n",
+					__FILE__,__LINE__-5);
+			return 0;
+		}
 
+	}else{
+		if(snprintf(passwd_entry,passwd_entry_length,
+					"%s:x:%d:%d::%s:%s\n",
+					username,uid,uid,home_path,bsh) < 0) {
+			fprintf(stderr,
+					"snprintf() failed , %s:%d.\n",
+					__FILE__,__LINE__-5);
+			return 0;
+		}
+	}
 	/*open files and write entries */
 	if(!write_file(PASSWD,passwd_entry,
 				passwd_entry_length,username)) {

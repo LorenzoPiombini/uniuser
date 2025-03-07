@@ -102,7 +102,7 @@ struct sys_param {
 
 /* the API available with this library*/
 int crypt_pswd(char *paswd, char **hash);
-int add_user(char *username, char *paswd);
+int add_user(char *username, char *paswd, char *full_name);
 int login(char *username, char *passwd);
 int get_user_info(char *username, char **home_pth, int *uid, int *is_admin);
 int del_user(char *username, int mod);
