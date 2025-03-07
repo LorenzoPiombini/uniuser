@@ -56,7 +56,6 @@ static int subgid_write(char *username, unsigned int sub_gid, int count);
 static int clean_up_file(char *username, char* file_name);
 static int cpy_skel(char *home_path, int home_path_length,int uid);
 static int cpy_file(FILE *src, FILE *dest);
-static int paswd_chk(char *passwrd);
 static int get_linux_distro();
 static int clean_home_dir(char *hm_path);
 static int get_save_pswd(char *username, char* hash);
@@ -172,16 +171,6 @@ int add_user(char *username, char *paswd)
 	if(user_already_exist(username)) {
 		printf("user already exist.\n");
 		return EALRDY_U;	
-	}
-
-	int p_chk = paswd_chk(paswd);
-
-	if(p_chk == 0 || p_chk == -1) {
-		fprintf(stderr,"password does not meet security criteria.\n");
-		return -1;	
-	} else if (p_chk == ECHAR) {
-		fprintf(stderr,"password contains invalid characters.\n");
-		return -1;
 	}
 
 	int status = EXIT_SUCCESS;
@@ -2109,14 +2098,14 @@ static int unlock_files()
 
 /*
  * paswd_chk return a bool value (0 : false 1: true)
- * 	if 0 is returned the password soeas not match security policies
+ * 	if 0 is returned the password doeas not match security policies
  *	and the creation of the user will failed.
  *
  *	ECHAR might be returned if the passowrd contain the system KILL or 
  *	ERASE char
  *
  * */
-static int paswd_chk(char *passwrd)
+int paswd_chk(char *passwrd, int rules)
 {
 	unsigned char upper = 0;
 	unsigned char lower = 0;
@@ -2124,7 +2113,7 @@ static int paswd_chk(char *passwrd)
 	unsigned char num = 0;
 
 	size_t pswd_len = strlen(passwrd);
-	if(pswd_len < PWD_L) return -1;
+	if((rules == RULE_ON) && pswd_len < PWD_L) return -1;
 
 	struct termios t;
 	if(tcgetattr(STDIN_FILENO,&t) == -1) {
@@ -2140,13 +2129,19 @@ static int paswd_chk(char *passwrd)
 		if(passwrd[i] == kill || passwrd[i] == erase)
 			return ECHAR;
 
-		if(isdigit(passwrd[i])) num = 1;
-		if(isupper(passwrd[i])) upper = 1;
-		if(islower(passwrd[i])) lower = 1;
-		if(ispunct(passwrd[i])) punct = 1;
+		if(rules == RULE_ON){
+			if(isdigit(passwrd[i])) num = 1;
+			if(isupper(passwrd[i])) upper = 1;
+			if(islower(passwrd[i])) lower = 1;
+			if(ispunct(passwrd[i])) punct = 1;
+		}
 	}
 	
-	return num & upper & lower & punct;
+	if(rules == RULE_ON) {
+		return num & upper & lower & punct;
+	} else {
+	       return 1;
+	}
 
 }
 /*

@@ -46,6 +46,10 @@
 /*password security length*/
 #define PWD_L 8 
 
+/*password security rules switch*/
+#define RULE_ON 1
+#define RULE_OFF 0
+
 /* errors */
 #define EMAX_U 10 /*exeed the maximum user number*/
 #define EALRDY_U 11 /*user already exist*/
@@ -100,6 +104,7 @@ int del_user(char *username, int mod);
 int create_group(char* group_name);
 int del_group(char *group_name);
 int edit_group_user(char *username, char *group_name, int mod);
+int paswd_chk(char *passwrd,int rules);
 
 
 

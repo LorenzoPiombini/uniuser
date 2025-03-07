@@ -92,5 +92,18 @@ int main(int arg, char** argv)
 		printf("group deleted from user!");
 	}
 
+	ret = 0;
+	if((ret = del_group(group_name)) != 0){
+		switch(ret){
+		case ENONE_G:	
+			fprintf(stderr,"%s: group %s does not exist.\n",Prog,group_name);
+			break;
+		default:
+			fprintf(stderr,"%s: can't delete group %s.\n",Prog,group_name);
+			break;
+		}
+	} else {
+		fprintf(stdout,"Group %s deleted.\n",group_name);
+	}
 	return EXIT_SUCCESS;
 }

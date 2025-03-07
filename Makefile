@@ -47,7 +47,7 @@ libraryPR:
 	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuserPR)
 
 $(TARGET):$(OBJ)
-	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
+	@if [ "0" = "1" ]; then\
 		gcc -o $@ $? -lcrypt -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack ;\
 	else\
 		gcc -o $@ $? -lcrypt -fsanitize=address -pie -z relro -z now -z noexecstack ;\
@@ -57,7 +57,7 @@ obj/%.o:src/%.c
 	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIC -fsanitize=address
 
 $(TARGET)_prod:$(OBJ_PROD)
-	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
+	@if [ "0" = "1" ]; then\
 		gcc -o $@ $? -lcrypt -lstrOP -pie -z relro -z now -z noexecstack ;\
 	else\
 		gcc -o $@ $? -lcrypt  -pie -z relro -z now -z noexecstack ;\
