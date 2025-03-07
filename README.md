@@ -11,6 +11,20 @@ allowing you to create users securely without relying on shell exposure or risky
 [main.c]: src/main.c 
 - Comes with a test program, `user_manager`, to demonstrate functionality.
 
+
+## API exposed endpoint
+
+```c
+int crypt_pswd(char *paswd, char **hash);
+int add_user(char *username, char *paswd);
+int login(char *username, char *passwd);
+int get_user_info(char *username, char **home_pth, int *uid);
+int del_user(char *username, int mod);
+int create_group(char* group_name);
+int del_group(char *group_name);
+int edit_group_user(char *username, char *group_name, int mod);
+```
+
 ## Prerequisites
 - A Linux-based operating system.
 - Root privileges (`sudo`) for building and testing.
@@ -43,7 +57,7 @@ This will compile the library and install it on your system, along with a test p
 Once installed, you can include the library in your C projects. Below is a basic example:
 
 ```c    
-#include "user_create.h"
+#include "uniuser.h"
 
 int main(void) {
     char *username = "testuser";
