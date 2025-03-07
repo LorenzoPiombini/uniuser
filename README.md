@@ -87,7 +87,7 @@ Values < 1000 indicate an error.
 ## Security
 
 the library comes with builtin checks for the password, by default the password provided won't be checked  
-against any of this criteria, you can use the `paswd_chk()` like this: 
+against any of this criteria, you can use the `pswd_chk()` like this: 
 
 ```c
 	int p_chk = paswd_chk(paswd,RULE_ON);
@@ -107,8 +107,8 @@ the code snipped checks for a password that must meet the following:
     - one special charatter(like @)
     - contain a number
 
-the function checks also if you have the password contains kill or erase chars  
+the function checks also if the password contains kill or erase chars  
 you can turn off this security criteria by passing to the `paswd_chk()` endpoint the parameter RULE_OFF  
 this way the program will check only for kill char `^U` or erase char `^?` which they might create problems if you
-decide to echo passwords, or in some embended systems.  
+decide to echo passwords, or in some embedded systems.  
 
