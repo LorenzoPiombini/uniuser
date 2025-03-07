@@ -1,5 +1,5 @@
 # Uniuser
-<p align="center">
+<p>
   <img src="./logo.png" width="200">
 </p>
 
