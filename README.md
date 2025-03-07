@@ -113,10 +113,10 @@ against any of this criteria, you can use the `pswd_chk()` like this:
 ```
 
 the code snipped checks for a password that must meet the following:   
-    - 8 character long
-    - one capital letter
-    - one special character (like @)
-    - contain a number
+- 8 character long
+- one capital letter
+- one special character (like @)
+- contain a number
 
 the function checks also if the password contains kill or erase chars  
 you can turn off this security criteria by passing to the `paswd_chk()` endpoint the parameter RULE_OFF  
