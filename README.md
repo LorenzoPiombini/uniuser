@@ -40,7 +40,7 @@ int edit_group_user(char *username, char *group_name, int mod);
 To get started, clone the repository from GitHub:
 
 ```bash
-$ git clone https://github.com/LorenzoPiombini/libuser.git
+$ git clone https://github.com/LorenzoPiombini/uniuser.git
 ```
 
 
@@ -49,7 +49,7 @@ $ git clone https://github.com/LorenzoPiombini/libuser.git
 Navigate to the cloned directory and run the following commands to configure and build the library:
 
 ```bash
-$ cd libuser
+$ cd uniuser
 $ ./configure
 $ sudo make build
 ```
