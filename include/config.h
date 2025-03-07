@@ -5,7 +5,7 @@
 #define HAVE_INTTYPES_H 1
 
 /* define to 0 if libstrOP is not found */
-#define HAVE_LIBSTROP 1
+#define HAVE_LIBSTROP 0
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
@@ -23,7 +23,7 @@
 #define HAVE_STRING_H 1
 
 /* define to 0 if str_op.h is not found */
-#define HAVE_STR_OP_H 1
+#define HAVE_STR_OP_H 0
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #define HAVE_SYS_STAT_H 1
