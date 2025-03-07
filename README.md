@@ -1,9 +1,8 @@
 <p>
-# Uniuser
   <img src="./logo.png" width="200">
 </p>
 
-## A Small User Management Library for Linux
+# Uniuser A Small User Management Library for Linux
 
 `uniuser` is a lightweight C library designed to programmatically manage users on a Linux operating system. It provides a simple function, `add_user(char *username, char *password)`,  
 allowing you to create users securely without relying on shell exposure or risky system calls like `system()`, `popen()`, or the `exec` family.
