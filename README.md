@@ -102,9 +102,9 @@ against any of this criteria, you can use the `pswd_chk()` like this:
 ```
 
 the code snipped checks for a password that must meet the following: 
-    - 8 charatter long
+    - 8 character long
     - one capital letter
-    - one special charatter(like @)
+    - one special character (like @)
     - contain a number
 
 the function checks also if the password contains kill or erase chars  
