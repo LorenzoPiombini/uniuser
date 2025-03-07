@@ -16,7 +16,7 @@ allowing you to create users securely without relying on shell exposure or risky
 - Comes with a test program, `user_manager`, to demonstrate functionality.
 
 
-## API exposed endpoint
+## API endpoint
 
 ```c
 int crypt_pswd(char *paswd, char **hash);
@@ -45,7 +45,7 @@ $ git clone https://github.com/LorenzoPiombini/uniuser.git
 ```
 
 
-##Build and Install
+## Build and Install
 
 Navigate to the cloned directory and run the following commands to configure and build the library:
 
@@ -56,7 +56,17 @@ $ sudo make build
 ```
 
 This will compile the library and install it on your system, along with a test program called `user_manager`.
+Keep in mind that now you have a binary containing the asan library because the artifact has been compiled  
+with the flag -fsanitize=address. I use this to spots some memory leaks 
+that aren't that easy to spot with other tools.
 
+lib asan make the binary bigger, so if you need a smaller binary for production you can run:
+```bash
+$ sudo make build_prod
+```
+this will install the library on your machine, and the test program will be called `user_manager_prod`, 
+both without lib asan.
+  
 ## Using the Library in Your Code
 
 Once installed, you can include the library in your C projects. Below is a basic example:
