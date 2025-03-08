@@ -248,7 +248,7 @@ int edit_user(char *username, int *uid, int element_to_change,...)
 	if(strncmp(username,ADMIN,strlen(ADMIN)) == 0) return -1;
 	if(element_to_change <= 0 ) return -1;
 
-
+	return 0;
 }
 int add_user(char *username, char *paswd, char *full_name)
 {
