@@ -14,10 +14,83 @@ int main(int arg, char** argv)
     char* username = argv[1];
     char* password = argv[2];
     char* full_name = NULL;
+
     if(arg == 4)
 	    full_name = argv[3];
 
-	int ret = add_user(username,password,full_name);
+
+	int ret = 0; 
+	char *test = "test1";
+	char *testG = "thisIsAGroup";
+	int mod = ADD_GU;
+	ret = edit_group_user(test,testG,mod);
+	if(ret != 0){
+		switch(ret) {
+		case ENONE_U:
+			fprintf(stderr,"user does not exist.\n");
+			break;
+		case ERR_GU:
+			fprintf(stderr,"DEL_GU failed.\n");
+			break;
+		case ENONE_GU:
+			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
+			break;
+		case ENONE_G:
+			fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
+			break;
+		default:
+			break;
+		}
+	}
+	
+	test = "test2";
+	testG = "thisIsAGroup";
+	ret = edit_group_user(test,testG,mod);
+	if(ret != 0){
+		switch(ret) {
+		case ENONE_U:
+			fprintf(stderr,"user does not exist.\n");
+			break;
+		case ERR_GU:
+			fprintf(stderr,"DEL_GU failed.\n");
+			break;
+		case ENONE_GU:
+			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
+			break;
+		case ENONE_G:
+			fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
+			break;
+		default:
+			break;
+		}
+
+	}
+
+	test = "test3";
+	testG = "thisIsAGroup";
+	ret = edit_group_user(test,testG,mod);
+	if(ret != 0){
+		switch(ret) {
+		case ENONE_U:
+			fprintf(stderr,"user does not exist.\n");
+			break;
+		case ERR_GU:
+			fprintf(stderr,"DEL_GU failed.\n");
+			break;
+		case ENONE_GU:
+			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
+			break;
+		case ENONE_G:
+			fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
+			break;
+		default:
+			break;
+		}
+
+	}
+
+	return 0;
+	ret = add_user(username,password,full_name);
 	if(ret < 1000) {
 		switch(ret) {
 		case EMAX_U:  
@@ -58,6 +131,7 @@ int main(int arg, char** argv)
 	}
 
 	ret = 0;
+
 	if((ret = edit_group_user(username,group_name,ADD_GU)) != 0){
 		switch(ret) {
 		case ENONE_U:

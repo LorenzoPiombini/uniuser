@@ -20,6 +20,7 @@
 #include <ctype.h>
 #include <termios.h>
 #include <dirent.h>
+#include <stdarg.h>
 #include "uniuser.h"
 /*
  *  modify this files to create a new user 
@@ -63,6 +64,7 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 static int directory_exist(char *path);
 static int remove_directory(char *path_dir);
 static int is_user_admin(char* username);
+static int str_contain_commas(char *str);
 
 
 
@@ -168,6 +170,28 @@ static int get_save_pswd(char *username, char *hash)
 
 }
 
+/*TODO: implement the edit_user functions
+ * the function must have two of these three parameters:
+ *	- username
+ *	- user ID
+ *	- element_to_change
+ * */
+int edit_user(char *username, int *uid, int element_to_change,...)
+{
+	/* 
+	 * an attempt to edit root user will fail
+	 * even if the root itself will try it
+	 * if you need to change the root password 
+	 * you will have to use the utilities provided from your 
+	 * Linux Distros;  
+	 * */
+	if(!username && !uid) return -1;
+	if(*uid == 0) return -1;
+	if(strncmp(username,ADMIN,strlen(ADMIN)) == 0) return -1;
+	if(element_to_change <= 0 ) return -1;
+
+
+}
 int add_user(char *username, char *paswd, char *full_name)
 {
 	if(user_already_exist(username)) {
@@ -1588,7 +1612,7 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 				if(!users){
 					/*
 					 * if strdup failes we do not modify the file
-					 * we just leave the old contentin place to avoid
+					 * we just leave the old content in place to avoid
 					 * data corruption
 					 * */
 					fprintf(stderr,"can't delete the group %s, for user %s.\n",group_name,username);
@@ -1600,26 +1624,38 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 				size_t len = strlen(users);
 				char new_entry[len];
 				memset(new_entry,0,len);
-				char *s = strtok(users,",");
-				if(!s) {
-					/*
-					 * if strtok failes we do not modify the file
-					 * we just leave the old content in place to avoid
-					 * data corruption
-					 * */
-					fprintf(stderr,"can't delete the group %s, for user %s.\n",group_name,username);
-					fputs(buffer,tmp);
-					free(users);
-					status = ERR_GU; 
-					break;
-				}
+				/*check if the users string has commas*/
+				if(str_contain_commas(users)) {
+					char *s = strtok(users,",");
+					if(!s) {
+						/*
+						 * if strtok failes we do not modify the file
+						 * we just leave the old content in place to avoid
+						 * data corruption
+						 * */
+						fprintf(stderr,"can't delete the group %s, for user %s.\n",group_name,username);
+						fputs(buffer,tmp);
+						free(users);
+						status = ERR_GU; 
+						break;
+					}
 
-				size_t username_l = strlen(username);
-				size_t old_l = 0;
-				do{
-					size_t toke_l = strlen(s);
-					if(strlen(s) == username_l) {
-						if(strncmp(username,s,username_l) != 0){
+					size_t username_l = strlen(username);
+					size_t old_l = 0;
+					do{
+						size_t toke_l = strlen(s);
+						if(strlen(s) == username_l) {
+							if(strncmp(username,s,username_l) != 0){
+								if(old_l == 0){
+									strncpy(new_entry,s,toke_l);
+								}else{
+									strncpy(&new_entry[old_l+1],s,toke_l);
+								}
+								old_l += toke_l;
+								new_entry[old_l] = ',';
+
+							}
+						}else{
 							if(old_l == 0){
 								strncpy(new_entry,s,toke_l);
 							}else{
@@ -1627,29 +1663,26 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 							}
 							old_l += toke_l;
 							new_entry[old_l] = ',';
-
 						}
-					}else{
-						if(old_l == 0){
-							strncpy(new_entry,s,toke_l);
-						}else{
-							strncpy(&new_entry[old_l+1],s,toke_l);
-						}
-						old_l += toke_l;
-						new_entry[old_l] = ',';
-					}
-				}while((s = strtok(NULL,",")));
+					}while((s = strtok(NULL,",")));
 
-				new_entry[old_l] = '\n';
-				/*zero out the rest of the buffer (line)*/
-				memset(&buffer[pos+1],0,strlen(&buffer[pos+1]));
-				/*copy the new users to the buffer*/
-				strncpy(&buffer[pos+1],new_entry,strlen(new_entry));
-				/*write the new entry to tmp file*/ 
-				fputs(buffer,tmp);
-				free(users);
-				
-				break;
+					new_entry[old_l] = '\n';
+					/*zero out the rest of the buffer (line)*/
+					memset(&buffer[pos+1],0,strlen(&buffer[pos+1]));
+					/*copy the new users to the buffer*/
+					strncpy(&buffer[pos+1],new_entry,strlen(new_entry));
+					/*write the new entry to tmp file*/ 
+					fputs(buffer,tmp);
+					free(users);
+
+					break;
+				}else{
+					free(users);
+					/*no commas in the user strin so it means we only have one user*/
+					memset(&buffer[pos+1],0,buf_size - (pos+1));
+					fputs(buffer,tmp);
+					break;
+				}
 			}
 			default:
 				break;
@@ -2558,4 +2591,13 @@ static int is_user_admin(char* username)
 	fclose(fp);
 	return 0;
 
+}
+
+static int str_contain_commas(char *str)
+{
+	for(; *str != '\0'; str++)
+		if(*str == ',') 
+			return 1;
+
+	return 0;
 }
