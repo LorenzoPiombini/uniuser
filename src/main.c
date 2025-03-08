@@ -18,8 +18,44 @@ int main(int arg, char** argv)
     if(arg == 4)
 	    full_name = argv[3];
 
+	if(login("test1","pass1",NO_STD) == -1)
+		printf("login failed\n");
+	else
+		printf("login succes\n");
 
+	return 0;
+
+	
 	int ret = 0; 
+	ret = add_user(username,password,full_name);
+	if(ret < 1000) {
+		switch(ret) {
+		case EMAX_U:  
+			fprintf(stderr,"exeed the maximum user number.\n");
+			break;
+		case EALRDY_U: 
+			fprintf(stderr,"user already exist.\n");
+		        break;
+		case ESGID: 
+			fprintf(stderr,"SUB_GID_MAX overflowed.\n");
+			break;
+		case ESUID: 
+			fprintf(stderr,"SUB_UID_MAX overflowed.\n");
+			break;
+		case ECHAR: 
+			fprintf(stderr,"passowrd contain KILL or ERASE system char.\n");
+			break;
+		default:
+			break;
+		}
+		fprintf(stderr,"%s: adding user failed!\n",Prog);
+		return EXIT_FAILURE;
+	}
+
+	fprintf(stdout,"%s: user %s, added.\n",Prog,username);
+	
+
+
 	char *test = "test1";
 	char *testG = "thisIsAGroup";
 	int mod = ADD_GU;
@@ -90,33 +126,7 @@ int main(int arg, char** argv)
 	}
 
 	return 0;
-	ret = add_user(username,password,full_name);
-	if(ret < 1000) {
-		switch(ret) {
-		case EMAX_U:  
-			fprintf(stderr,"exeed the maximum user number.\n");
-			break;
-		case EALRDY_U: 
-			fprintf(stderr,"user already exist.\n");
-		        break;
-		case ESGID: 
-			fprintf(stderr,"SUB_GID_MAX overflowed.\n");
-			break;
-		case ESUID: 
-			fprintf(stderr,"SUB_UID_MAX overflowed.\n");
-			break;
-		case ECHAR: 
-			fprintf(stderr,"passowrd contain KILL or ERASE system char.\n");
-			break;
-		default:
-			break;
-		}
-		fprintf(stderr,"%s: adding user failed!\n",Prog);
-		return EXIT_FAILURE;
-	}
-
-	fprintf(stdout,"%s: user %s, added.\n",Prog,username);
-	ret = 0;
+ret = 0;
 	char *group_name = "isThisANEWnewGroup?";
 	if((ret = create_group(group_name)) != 0){
 		switch(ret) {

@@ -83,6 +83,11 @@
 #define ADMIN "root"
 #define SUDO "sudo"
 
+/*Login constants*/
+#define NOT_STD 0
+#define STD 1
+#define clean_path "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+
 
 
 struct sys_param {
@@ -101,9 +106,9 @@ struct sys_param {
 };
 
 /* the API available with this library*/
-int crypt_pswd(char *paswd, char **hash);
+int crypt_pswd(char *paswd, char **hash, char* salt);
 int add_user(char *username, char *paswd, char *full_name);
-int login(char *username, char *passwd);
+int login(char *username, char *passwd, int mod);
 int get_user_info(char *username, char **home_pth, int *uid, int *is_admin);
 int del_user(char *username, int mod);
 int create_group(char* group_name);

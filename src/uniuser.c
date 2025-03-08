@@ -59,12 +59,13 @@ static int cpy_skel(char *home_path, int home_path_length,int uid);
 static int cpy_file(FILE *src, FILE *dest);
 static int get_linux_distro();
 static int clean_home_dir(char *hm_path);
-static int get_save_pswd(char *username, char* hash);
+static int get_save_pswd(char *username, char **svd_pswd);
 static int add_entry_to_group_file( char *file_name, char *group_name, char *username, int mod);
 static int directory_exist(char *path);
 static int remove_directory(char *path_dir);
 static int is_user_admin(char* username);
 static int str_contain_commas(char *str);
+static int extract_salt(char *pswd_hashed, char **salt);
 
 
 
@@ -99,7 +100,7 @@ static const char randombytes[] = { 'c','&','d','"','o','6','@','^',
 			'c','v','~','#','$','%','0','8',
 			'v','c','j','K','G','h','S','P',};
 
-int login(char *username, char *passwd)
+int login(char *username, char *passwd, int mod)
 {
         struct passwd *pw = getpwnam(username);
         if(!pw) {
@@ -107,32 +108,60 @@ int login(char *username, char *passwd)
                 return -1;    
         }
         
-        
+ 	/*
+	 * get the passwd from SHADOW file,
+	 * and extract the salt
+	 * */
+	char *svd_pswd = NULL;
+	if(get_save_pswd(username,&svd_pswd) == -1) {
+                fprintf(stderr,"can't get password from db.\n");
+		return -1;
+	}
+
+	char *salt = NULL;
+        if(extract_salt(svd_pswd,&salt) == -1){
+                fprintf(stderr,"can't get password from db.\n");
+		free(svd_pswd);
+		return -1;
+	}	
 	/*
-         * if the user exist
          * encrtypt the password and compare it 
          * with the password in the database.
          * */
 	char *hash = NULL;
-	if(crypt_pswd(passwd,&hash) == -1) {
+	if(crypt_pswd(passwd,&hash, salt) == -1) {
 		fprintf(stderr,
 				"paswd encryption failed. %s:%d.\n",
 				__FILE__,__LINE__-1);
+		free(svd_pswd);
                 return -1;
         } 
-	
-	/*
-	 * get the passwd from SHADOW file,
-	 * and compare it to the saved password
-	 * */
-	if(get_save_pswd(username,hash) == -1) {
-                fprintf(stderr,"wrong password or username.\n");
-                free(hash);
-		return -1;
+
+	free(salt);	
+	if(strncmp(hash,svd_pswd,strlen(hash)) == 0){
+		free(hash);
+		free(svd_pswd);
+		if(mod == STD){
+			if(setuid(pw->pw_uid) == -1){
+				return -1;
+			}
+			if(chdir(pw->pw_dir) != 0){
+				return -1;
+			}
+			setenv("HOME",pw->pw_dir,1);
+			setenv("USER",pw->pw_name,1);
+			setenv("LOGNAME",pw->pw_name,1);
+			setenv("SHELL",pw->pw_shell,1);
+			setenv("PATH",clean_path,1);
+			execl(pw->pw_shell, pw->pw_shell, NULL);
+		}
+		return EXIT_SUCCESS;
 	}
 
-        free(hash);
-        return EXIT_SUCCESS;
+
+	free(hash);
+	free(svd_pswd);
+	return -1;
 }
 
 /*
@@ -142,7 +171,7 @@ int login(char *username, char *passwd)
  *
  * */
 
-static int get_save_pswd(char *username, char *hash)
+static int get_save_pswd(char *username, char **svd_pswd)
 {
 	FILE *fp;
 
@@ -151,18 +180,47 @@ static int get_save_pswd(char *username, char *hash)
 		fp = fopen(SHADOW,"r");
 	}while(fp == NULL);
 	
-	int columns = 200;
+	int columns = 5000;
 	char line[columns];
 	memset(line,0,columns);
 
 	while(fgets(line,columns,fp)) {
-		char *t = strtok(line,":");
-		if(strlen(username) != strlen(t))
+		char *buff = strdup(line);
+		if(!buff){
+			fprintf(stderr,"strdup() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			return -1;
+		}
+		char *t = strtok(buff,":");
+		if(!t){
+			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			return -1;
+		}
+		if(strlen(username) != strlen(t)){
+			memset(line,0,columns);
+			free(buff);
 			continue;
+		}
+		
+		if(strncmp(username,t,strlen(t)) != 0){
+			memset(line,0,columns);
+			free(buff);
+			continue;
+		}
 
-		char *old_pswd = strtok(NULL,":");
-		if(strncmp(old_pswd,hash,strlen(old_pswd)) == 0)
+		t = strtok(NULL,":");
+		if(!t){
+			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			return -1;
+		}
+		*svd_pswd = strdup(t);
+		if(!(*svd_pswd)) {
+			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			free(buff);
+			return -1;
+		}else {
+			free(buff);
 			return 0;
+		}
 
 	}
 
@@ -273,7 +331,7 @@ int add_user(char *username, char *paswd, char *full_name)
 	
 	/*encrtypt the password */
 	char *hash = NULL;
-	if(crypt_pswd(paswd,&hash) == -1) {
+	if(crypt_pswd(paswd,&hash,NULL) == -1) {
 		fprintf(stderr,
 				"paswd encryption failed. %s:%d.\n",
 				__FILE__,__LINE__-1);
@@ -1254,7 +1312,7 @@ static unsigned char gen_random_bytes(char *buffer,int length)
 #endif /*comment out fucntion gen_random_bytes() */
 
 
-int crypt_pswd(char *paswd, char **hash)
+int crypt_pswd(char *paswd, char **hash, char* salt)
 {
 
 	size_t l = strlen(paswd);
@@ -1286,15 +1344,21 @@ int crypt_pswd(char *paswd, char **hash)
 	*/
 
 	char const *prefix = "$y$10$";
-	char *salt = crypt_gensalt(prefix, 0, randombytes, 64);
+	char *internal_salt = NULL;
 	if(!salt) {
-		fprintf(stderr,
-				"crypt_gensalt() failed. %s:%d.\n",
-				__FILE__,__LINE__-2);
-		return EXIT_FAILURE;
+		internal_salt = crypt_gensalt(prefix, 0, randombytes, 64);
+		if(!internal_salt){
+			fprintf(stderr,
+					"crypt_gensalt() failed. %s:%d.\n",
+					__FILE__,__LINE__-2);
+			return EXIT_FAILURE;
+		}
+
+		crypt_r(data.input,internal_salt,&data);
+	}else {
+		crypt_r(data.input,salt,&data);
 	}
 		
-	crypt_r(data.input,salt,&data);
 	if(data.output[0] == '\0') {
 		fprintf(stderr,
 				"crypt_r() failed. %s:%d.\n",
@@ -2600,4 +2664,38 @@ static int str_contain_commas(char *str)
 			return 1;
 
 	return 0;
+}
+
+static int extract_salt(char *pswd_hashed, char **salt)
+{
+	
+	char *buff = strdup(&pswd_hashed[7]);
+	if(!buff){
+		fprintf(stderr,"strdup() failed, %s:%d.\n",__FILE__,__LINE__-2);
+		return -1;
+	}	
+
+	char *t = strtok(buff,"$");
+	if(!t){
+		fprintf(stderr,"strtok() failed %s:%d.",__FILE__,__LINE__-2);
+		free(buff);	
+		return -1;
+	}
+
+	size_t l = strlen(t)+8;
+	char full_st[l];
+	memset(full_st,0,l);
+
+	strncat(full_st,pswd_hashed,7);
+	strncat(&full_st[7],t,strlen(t));
+
+	*salt = strdup(full_st);
+	if(!(*salt)){
+		fprintf(stderr,"strdup() failed, %s:%d.\n",__FILE__,__LINE__-2);
+		free(buff);	
+		return -1;
+	}
+	free(buff);	
+	return 0;
+
 }
