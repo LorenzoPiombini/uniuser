@@ -19,9 +19,9 @@ allowing you to create users securely without relying on shell exposure or risky
 ## API endpoint
 
 ```c
-int crypt_pswd(char *paswd, char **hash);
+int crypt_pswd(char *paswd, char **hash,char *salt);
 int add_user(char *username, char *paswd, char *full_name);
-int login(char *username, char *passwd);
+int login(char *username, char *passwd, int mod);
 int get_user_info(char *username, char **home_pth, int *uid, int *is_admin);
 int del_user(char *username, int mod);
 int create_group(char* group_name);
@@ -35,6 +35,7 @@ int list_group(char *username, char **list);
 - A Linux-based operating system.
 - Root privileges (`sudo`) for building and testing.
 - GCC and standard C development tools (`make`, `git`, etc.).
+- libCrypt
 
 ## Getting Started
 
