@@ -2417,7 +2417,7 @@ int list_group(char *username, char **list)
 					strncpy(*list,s,len);
 					(*list)[len] = ',';
 				}else {
-					size_t temp = strlen(s);
+					size_t temp = strlen(s)+1;
 					if(len < 500 && ((len + temp) < 500 )){
 						strncpy(&(*list)[len+1],s,temp);
 						len += temp;
