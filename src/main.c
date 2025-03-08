@@ -18,7 +18,7 @@ int main(int arg, char** argv)
     if(arg == 4)
 	    full_name = argv[3];
 
-	if(login("test1","pass1",NO_STD) == -1)
+	if(login("test1","pass1",STD) == -1)
 		printf("login failed\n");
 	else
 		printf("login succes\n");

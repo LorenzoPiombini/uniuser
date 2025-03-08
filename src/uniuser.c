@@ -21,6 +21,8 @@
 #include <termios.h>
 #include <dirent.h>
 #include <stdarg.h>
+#include <spawn.h>
+#include <sys/wait.h>
 #include "uniuser.h"
 /*
  *  modify this files to create a new user 
@@ -66,7 +68,7 @@ static int remove_directory(char *path_dir);
 static int is_user_admin(char* username);
 static int str_contain_commas(char *str);
 static int extract_salt(char *pswd_hashed, char **salt);
-
+static int start_user_session(struct passwd *pw);
 
 
 #if !HAVE_LIBSTROP
@@ -99,6 +101,9 @@ static const char randombytes[] = { 'c','&','d','"','o','6','@','^',
 			'U','H','v','b','L','X','+','-',
 			'c','v','~','#','$','%','0','8',
 			'v','c','j','K','G','h','S','P',};
+
+/* needed to spawn the user session*/
+extern char **environ;
 
 int login(char *username, char *passwd, int mod)
 {
@@ -141,20 +146,11 @@ int login(char *username, char *passwd, int mod)
 	if(strncmp(hash,svd_pswd,strlen(hash)) == 0){
 		free(hash);
 		free(svd_pswd);
-		if(mod == STD){
-			if(setuid(pw->pw_uid) == -1){
+		if(mod == STD){ 
+			if(start_user_session(pw) == -1)
 				return -1;
-			}
-			if(chdir(pw->pw_dir) != 0){
-				return -1;
-			}
-			setenv("HOME",pw->pw_dir,1);
-			setenv("USER",pw->pw_name,1);
-			setenv("LOGNAME",pw->pw_name,1);
-			setenv("SHELL",pw->pw_shell,1);
-			setenv("PATH",clean_path,1);
-			execl(pw->pw_shell, pw->pw_shell, NULL);
 		}
+
 		return EXIT_SUCCESS;
 	}
 
@@ -2698,4 +2694,29 @@ static int extract_salt(char *pswd_hashed, char **salt)
 	free(buff);	
 	return 0;
 
+}
+static int start_user_session(struct passwd *pw)
+{
+	if(setuid(pw->pw_uid) != 0 ){
+		return -1;
+	}
+	if(chdir(pw->pw_dir) != 0){
+		return -1;
+	}
+	setenv("HOME",pw->pw_dir,1);
+	setenv("USER",pw->pw_name,1);
+	setenv("LOGNAME",pw->pw_name,1);
+	setenv("SHELL",pw->pw_shell,1);
+	setenv("PATH",clean_path,1);
+	
+	pid_t pid;
+	char *args[] = {pw->pw_shell, "-l",NULL};
+
+	if(posix_spawn(&pid,pw->pw_shell,NULL,NULL,args,environ) != 0){
+		fprintf(stderr,"can't start user session");
+		return -1;
+	}
+
+	waitpid(pid,NULL,0);
+	return 0;
 }
