@@ -69,6 +69,7 @@ static int is_user_admin(char* username);
 static int str_contain_commas(char *str);
 static int extract_salt(char *pswd_hashed, char **salt);
 static int start_user_session(struct passwd *pw);
+static int get_full_name(char *username, char *full_name);
 
 
 #if !HAVE_LIBSTROP
@@ -2417,8 +2418,10 @@ static int clean_home_dir(char *hm_path)
 }
 
 
-int get_user_info(char *username, char **home_pth, int *uid, int *is_admin)
+int get_user_info(char *username, struct user_info* ui)
 {
+	memset(ui,0,sizeof(struct user_info));
+
 	struct passwd *pw = getpwnam(username);
 	if(!pw) {
 		fprintf(stderr,"%s() failed, %s:%d\n",
@@ -2426,21 +2429,23 @@ int get_user_info(char *username, char **home_pth, int *uid, int *is_admin)
 		return -1;
 	}
 
-	if(home_pth){
-		(*home_pth) = strdup(pw->pw_dir);
-		if(!(*home_pth)){
-			return -1;
-		}
-	}
+	strncpy((*ui).dir,pw->pw_dir,strlen(pw->pw_dir));
+			
+	char full_name[1024];
+	memset(full_name,0,1024);
+	
+	if(get_full_name(username,full_name) == 0) strcpy((*ui).full_name,full_name);
 
-	if(uid){
-		*uid = pw->pw_uid;
-	}
+	(*ui).uid = pw->pw_uid;
+	(*ui).gid = pw->pw_gid;	
+	(*ui).is_admin = is_user_admin(username);	
+	strncpy((*ui).username,username,strlen(username));
 
-	if(is_admin){
-		*is_admin = is_user_admin(username);	
-	}
+	char *list = NULL;
+	list_group(username,&list);
 
+	strncpy((*ui).group_list,list,strlen(list));
+	free(list);
 	return 0;
 }
 
@@ -2719,4 +2724,41 @@ static int start_user_session(struct passwd *pw)
 
 	waitpid(pid,NULL,0);
 	return 0;
+}
+static int get_full_name(char *username, char *full_name)
+{
+	FILE *fp = fopen(PASSWD,"r");
+	if(!fp){
+		fprintf(stderr,"can't open %s %s:%d.\n",PASSWD,__FILE__,__LINE__-2);
+		return -1;
+	}
+
+	int column = 1024;
+	char line[column];
+	memset(line,0,column);
+
+	while(fgets(line,column,fp)){
+		if(strstr(line,username) != NULL){
+			char buff[column];
+			strncpy(buff,line,column);
+			char *t = strtok(buff,":");
+			for(int i = 0; i < 4; i++){
+				t = strtok(NULL,":");
+			}
+
+			if(!t){
+				fclose(fp);
+				return -1;
+			}
+
+			strncpy(full_name,t,strlen(t));
+			fclose(fp);
+			return 0;
+		}
+
+		memset(line,0,column);
+	}
+	
+	fclose(fp);
+	return -1;
 }

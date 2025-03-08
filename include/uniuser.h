@@ -105,11 +105,25 @@ struct sys_param {
 	char *ENCRYPT_METHOD;
 };
 
+
+#define MAX_STRING_SIZE 2048
+struct user_info{
+	char username[MAX_STRING_SIZE];
+	char full_name[MAX_STRING_SIZE];
+	char dir[MAX_STRING_SIZE];
+	char group_list[MAX_STRING_SIZE];
+	int uid;
+	int gid;
+	int is_admin;	
+};
+
+
+
 /* the API available with this library*/
 int crypt_pswd(char *paswd, char **hash, char* salt);
 int add_user(char *username, char *paswd, char *full_name);
 int login(char *username, char *passwd, int mod);
-int get_user_info(char *username, char **home_pth, int *uid, int *is_admin);
+int get_user_info(char *username, struct user_info *ui);
 int del_user(char *username, int mod);
 int create_group(char* group_name);
 int del_group(char *group_name);

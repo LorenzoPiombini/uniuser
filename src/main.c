@@ -18,14 +18,6 @@ int main(int arg, char** argv)
     if(arg == 4)
 	    full_name = argv[3];
 
-	if(login("test1","pass1",STD) == -1)
-		printf("login failed\n");
-	else
-		printf("login succes\n");
-
-	return 0;
-
-	
 	int ret = 0; 
 	ret = add_user(username,password,full_name);
 	if(ret < 1000) {
@@ -52,8 +44,22 @@ int main(int arg, char** argv)
 		return EXIT_FAILURE;
 	}
 
+
 	fprintf(stdout,"%s: user %s, added.\n",Prog,username);
 	
+	struct user_info ui;
+	ret = 0;
+	ret = get_user_info(username,&ui);
+
+	if(login("test1","pass1",STD) == -1)
+		printf("login failed\n");
+	else
+		printf("login succes\n");
+
+	return 0;
+
+	
+
 
 
 	char *test = "test1";
@@ -173,33 +179,6 @@ ret = 0;
 	/*YOU HAVE TO FREE LIST*/
 	free(list);
 
-	/*GET USER INFO */
-	/* if you need only the home path*/
-	char *home_dir = NULL;
-	if(get_user_info(username,&home_dir, NULL,NULL) == -1){
-		fprintf(stderr,"%s: can't get info for user %s username",Prog,username);
-	}
-
-	fprintf(stdout,"user %s's home path %s.\n",username,home_dir);
-	/*YOU HAVE TO FREE THE home_dir char* */
-	free(home_dir);
-
-	/*check if the user has admin privilege */
-	int is_admin = 0;
-	if(get_user_info(username,NULL, NULL,&is_admin) == -1){
-		fprintf(stderr,"%s: can't get info for user %s username",Prog,username);
-	}
-	
-	char *admin = is_admin ? "has admin privileged" : " has not admin priviledge";
-	fprintf(stdout,"user %s %s.\n",username,admin);
-
-
-	int uid = 0;
-	if(get_user_info(username,NULL, &uid,NULL) == -1){
-                fprintf(stderr,"%s: can't get info for user %s username",Prog,username);
-        }                                                                                                          
-        
-	fprintf(stdout,"user %s's uid is %d.\n",username,uid);
 
 	ret = 0;
 	if((ret = del_user(username,DEL_SAFE)) != 0){
