@@ -46,90 +46,100 @@ int main(int arg, char** argv)
 
 
 	fprintf(stdout,"%s: user %s, added.\n",Prog,username);
-	
-	struct user_info ui;
-	ret = 0;
-	ret = get_user_info(username,&ui);
+
+	if((ret = del_user(username,DEL_SAFE)) != 0){
+		switch(ret){
+		case ENONE_U: 
+			fprintf(stderr,"user does not exist.\n");
+			break;
+		default:
+			break;
+		}
+		fprintf(stdout,"%s: del_user() failed.\n",Prog);
+		return EXIT_FAILURE;
+	}else{
+		fprintf(stdout,"user %s, deleted.\n",username);
+	}
+
 
 	if(login("test1","pass1",STD) == -1)
-		printf("login failed\n");
+		printf("\nlogin failed\n");
 	else
 		printf("login succes\n");
 
-	return 0;
 
-	
-
-
-
-	char *test = "test1";
+	char *test = "CIAO";
 	char *testG = "thisIsAGroup";
-	int mod = ADD_GU;
+	int mod = DEL_GU;
 	ret = edit_group_user(test,testG,mod);
-	if(ret != 0){
-		switch(ret) {
-		case ENONE_U:
-			fprintf(stderr,"user does not exist.\n");
-			break;
-		case ERR_GU:
-			fprintf(stderr,"DEL_GU failed.\n");
-			break;
-		case ENONE_GU:
-			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
-			break;
-		case ENONE_G:
-			fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
-			break;
-		default:
-			break;
-		}
+	switch(ret) {
+	case ENONE_U:
+		fprintf(stderr,"user does not exist.\n");
+		break;
+	case ERR_GU:
+		fprintf(stderr,"DEL_GU failed.\n");
+		break;
+	case ENONE_GU:
+		fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
+		break;
+	case ENONE_G:
+		fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
+		break;
+	case 0:
+		fprintf(stderr,"operation %s successful!\n", mod == DEL_GU ? "DEL_GU" : "ADD_GU");
+		break;
+	default:
+		break;
 	}
 	
-	test = "test2";
+	test = "Kings";
 	testG = "thisIsAGroup";
 	ret = edit_group_user(test,testG,mod);
-	if(ret != 0){
-		switch(ret) {
-		case ENONE_U:
-			fprintf(stderr,"user does not exist.\n");
-			break;
-		case ERR_GU:
-			fprintf(stderr,"DEL_GU failed.\n");
-			break;
-		case ENONE_GU:
-			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
-			break;
-		case ENONE_G:
-			fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
-			break;
-		default:
-			break;
-		}
-
+	
+	switch(ret) {
+	case ENONE_U:
+		fprintf(stderr,"user does not exist.\n");
+		break;
+	case ERR_GU:
+		fprintf(stderr,"DEL_GU failed.\n");
+		break;
+	case ENONE_GU:
+		fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
+		break;
+	case ENONE_G:
+		fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
+		break;
+	case 0:
+		fprintf(stderr,"operation %s successful!\n", mod == DEL_GU ? "DEL_GU" : "ADD_GU");
+		break;
+	default:
+		break;
 	}
 
-	test = "test3";
+	
+	test = "lpiombini";
 	testG = "thisIsAGroup";
 	ret = edit_group_user(test,testG,mod);
-	if(ret != 0){
-		switch(ret) {
-		case ENONE_U:
-			fprintf(stderr,"user does not exist.\n");
-			break;
-		case ERR_GU:
-			fprintf(stderr,"DEL_GU failed.\n");
-			break;
-		case ENONE_GU:
-			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
-			break;
-		case ENONE_G:
-			fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
-			break;
-		default:
-			break;
-		}
-
+	switch(ret) {
+	case ENONE_U:
+		fprintf(stderr,"user does not exist.\n");
+		break;
+	case ERR_GU:
+		fprintf(stderr,"DEL_GU failed.\n");
+		break;
+	case ENONE_GU:
+		fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
+		break;
+	case ENONE_G:
+		fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
+		break;
+	case 0:
+		fprintf(stderr,"operation %s successful!\n", mod == DEL_GU ? "DEL_GU" : "ADD_GU");
+		break;
+	default:
+		break;
 	}
+
 
 	return 0;
 ret = 0;
@@ -180,21 +190,7 @@ ret = 0;
 	free(list);
 
 
-	ret = 0;
-	if((ret = del_user(username,DEL_SAFE)) != 0){
-		switch(ret){
-		case ENONE_U: 
-			fprintf(stderr,"user does not exist.\n");
-			break;
-		default:
-			break;
-		}
-		fprintf(stdout,"%s: del_user() failed.\n",Prog);
-		return EXIT_FAILURE;
-	}else{
-		fprintf(stdout,"user %s, deleted.\n",username);
-	}
-
+	
 	ret = 0;
 	if((ret = edit_group_user(username,group_name,DEL_GU)) != 0){
 		switch(ret) {

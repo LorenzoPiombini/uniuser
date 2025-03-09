@@ -70,6 +70,7 @@ static int str_contain_commas(char *str);
 static int extract_salt(char *pswd_hashed, char **salt);
 static int start_user_session(struct passwd *pw);
 static int get_full_name(char *username, char *full_name);
+static void clean(char *str, char item);
 
 
 #if !HAVE_LIBSTROP
@@ -1569,7 +1570,7 @@ static int clean_up_file(char *username,char *file_name) {
 				fprintf(stderr,"strdup failed %s:%d",__FILE__,__LINE__-3);
 				return -1;
 			}
-			char *t = strtok(buffer,":");
+			char *t = strtok(buf_cpy,":");
 			if(!t){
 				fclose(fp);
 				fprintf(stderr,"strtok failed %s:%d",__FILE__,__LINE__-3);
@@ -1709,11 +1710,13 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 						status = ERR_GU; 
 						break;
 					}
-
 					size_t username_l = strlen(username);
 					size_t old_l = 0;
 					do{
+						size_t pre_l = strlen(s);
+						clean(s,'\n');
 						size_t toke_l = strlen(s);
+						toke_l += (pre_l > toke_l) ? 1 : 0;
 						if(strlen(s) == username_l) {
 							if(strncmp(username,s,username_l) != 0){
 								if(old_l == 0){
@@ -1750,6 +1753,7 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 					free(users);
 					/*no commas in the user strin so it means we only have one user*/
 					memset(&buffer[pos+1],0,buf_size - (pos+1));
+					buffer[pos+1] = '\n';
 					fputs(buffer,tmp);
 					break;
 				}
@@ -2770,4 +2774,12 @@ static int get_full_name(char *username, char *full_name)
 	
 	fclose(fp);
 	return -1;
+}
+static void clean(char *str, char item)
+{
+	for(;*str != '\0';str++){
+		if(*str == item)
+			*str = '\0'; 	
+	}
+
 }
