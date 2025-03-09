@@ -51,7 +51,7 @@ static int unlock_file(char *file_name);
 static int unlock_files();
 static int write_file(char *file_name, char *entry, size_t entry_size, char *username);
 static int shdw_write(char *username, char *hash, struct sys_param *param);
-static int psdw_write(char *username, int uid, char* full_name);
+static int psdw_write(char *username, int uid, int *gid,char* full_name);
 static int group_write(char *username, int uid);
 static int gshdw_write(char *username);
 static int subuid_write(char *username, unsigned int sub_uid, int count);
@@ -247,6 +247,8 @@ int edit_user(char *username, int *uid, int element_to_change,...)
 
 	return 0;
 }
+
+
 int add_user(char *username, char *paswd, char *full_name)
 {
 	if(user_already_exist(username)) {
@@ -293,8 +295,9 @@ int add_user(char *username, char *paswd, char *full_name)
 	}
 
 	int uid = last_UID(PASSWD);
+	int gid = last_UID(GP);
 
-	if(uid == param.UID_MAX) {
+	if(uid == param.UID_MAX || gid == param.GID_MAX) {
 		status = EMAX_U;
 		goto clean_on_exit;
 	}
@@ -328,14 +331,15 @@ int add_user(char *username, char *paswd, char *full_name)
 	
 	/*encrtypt the password */
 	char *hash = NULL;
-	if(crypt_pswd(paswd,&hash,NULL) == -1) {
-		fprintf(stderr,
-				"paswd encryption failed. %s:%d.\n",
-				__FILE__,__LINE__-1);
-		status = EXIT_FAILURE;
-		goto clean_on_exit;
+	if(paswd){
+		if(crypt_pswd(paswd,&hash,NULL) == -1) {
+			fprintf(stderr,
+					"paswd encryption failed. %s:%d.\n",
+					__FILE__,__LINE__-1);
+			status = EXIT_FAILURE;
+			goto clean_on_exit;
+		}
 	}
-
 	/*
 	 * write the data to the files to add the user
 	 * @@@@@@@ ACQUIRE LOCKS TO BE SURE THIS PROGRAM IS THE ONLY ONE ADDING USERS!!!! @@@@ 
@@ -374,8 +378,12 @@ int add_user(char *username, char *paswd, char *full_name)
 
 	free(hash);
 	
-	uid++; /*incrementing the last user id by one to make the new user id */
-
+	/*
+	 * incrementing the last user id and group id 
+	 * by one to make the new user id values 
+	 * */
+	uid++; 
+	gid++;
     /*
      *  if one of this if test fails the program will clean the files 
      *  already written to avoid partial users data and to ensure
@@ -383,7 +391,8 @@ int add_user(char *username, char *paswd, char *full_name)
      * */
 
 	if(full_name){
-		if(!psdw_write(username,uid,full_name)) {
+		
+		if(!psdw_write(username,uid,((gid == uid) || (gid < uid)) ? NULL : &gid,full_name)) {
 			fprintf(stderr,
 					"psdw_write() failed, %s:%d.\n",
 					__FILE__,__LINE__-3);
@@ -396,7 +405,7 @@ int add_user(char *username, char *paswd, char *full_name)
 			goto clean_on_exit;
 		}
 	}else{
-		if(!psdw_write(username,uid,NULL)) {
+		if(!psdw_write(username,uid,((uid == gid) ||(gid < uid)) ? NULL : &gid,NULL)) {
 			fprintf(stderr,
 					"psdw_write() failed, %s:%d.\n",
 					__FILE__,__LINE__-3);
@@ -411,7 +420,7 @@ int add_user(char *username, char *paswd, char *full_name)
 
 	}
 
-	if(!group_write(username,uid)) {
+	if(!group_write(username,((uid == gid) || (gid < uid)) ? uid : gid)) {
 		fprintf(stderr,
 				"group_write() failed, %s:%d.\n",
 				__FILE__,__LINE__-3);
@@ -1426,7 +1435,7 @@ static int shdw_write(char *username, char *hash, struct sys_param *param)
      * 1 is for '\n'
 	 * 1 is for '\0'
 	 * */
-	size_t entry_length = strlen(username) + strlen(hash) +\
+	size_t entry_length = strlen(username) + strlen(hash ? hash : "!") +\
 			      number_of_digit(days_nr) +\
 			      number_of_digit((*param).PASS_MIN_DAYS) +\
 			      number_of_digit((*param).PASS_MAX_DAYS) +\
@@ -1437,7 +1446,7 @@ static int shdw_write(char *username, char *hash, struct sys_param *param)
 	memset(buffer,0,entry_length);
 
 	if(snprintf(buffer,entry_length,"%s:%s:%ld:%d:%d:%d:::\n",
-				username,hash,days_nr,
+				username,hash ? hash : "!",days_nr,
 				(*param).PASS_MIN_DAYS,
 				(*param).PASS_MAX_DAYS,
 				(*param).PASS_WARN_AGE) < 0) {
@@ -1458,7 +1467,7 @@ static int shdw_write(char *username, char *hash, struct sys_param *param)
 	return 1;
 }
 
-static int psdw_write(char *username, int uid, char* full_name)
+static int psdw_write(char *username, int uid,int *gid, char* full_name)
 {	
 	size_t hm_pth_l = strlen(hm) + strlen(username) + 2;
 	char home_path[hm_pth_l];
@@ -1496,7 +1505,7 @@ static int psdw_write(char *username, int uid, char* full_name)
 	if(full_name){
 		if(snprintf(passwd_entry,passwd_entry_length,
 					"%s:x:%d:%d:%s:%s:%s\n",
-					username,uid,uid,full_name,home_path,bsh) < 0) {
+					username,uid,gid ? *gid : uid,full_name,home_path,bsh) < 0) {
 			fprintf(stderr,
 					"snprintf() failed , %s:%d.\n",
 					__FILE__,__LINE__-5);
@@ -1506,7 +1515,7 @@ static int psdw_write(char *username, int uid, char* full_name)
 	}else{
 		if(snprintf(passwd_entry,passwd_entry_length,
 					"%s:x:%d:%d::%s:%s\n",
-					username,uid,uid,home_path,bsh) < 0) {
+					username,uid,gid ? *gid : uid,home_path,bsh) < 0) {
 			fprintf(stderr,
 					"snprintf() failed , %s:%d.\n",
 					__FILE__,__LINE__-5);
