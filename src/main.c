@@ -91,7 +91,7 @@ int main(int arg, char** argv)
 	default:
 		break;
 	}
-	
+
 	test = "Kings";
 	testG = "thisIsAGroup";
 	ret = edit_group_user(test,testG,mod);
@@ -116,7 +116,6 @@ int main(int arg, char** argv)
 		break;
 	}
 
-	
 	test = "lpiombini";
 	testG = "thisIsAGroup";
 	ret = edit_group_user(test,testG,mod);

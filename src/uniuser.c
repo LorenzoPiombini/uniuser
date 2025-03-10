@@ -1269,25 +1269,22 @@ static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 
 static unsigned char user_already_exist(char *username)
 {
-	FILE *fp = fopen(GP,"r");
+	FILE *fp = fopen(PASSWD,"r");
 	if(!fp) {
 		fprintf(stderr,"can't open %s.\n",GP);
 		return 0;
 	}
 
-	int columns = 80;
+	int columns = 500;
 	char line[columns];
 	memset(line,0,columns);
-	size_t un_l = strlen(username);
 
 	while(fgets(line,columns,fp)) {
-		char* t = strtok(line,":");
-		if(strlen(t) == un_l) {
-			if(strncmp(t,username,un_l) == 0) {
-				fclose(fp);
-				return 1;
-			}
+		if(strstr(line,username) != NULL){
+			fclose(fp);
+			return 1;
 		}
+
 		memset(line,0,columns);
 	}
 
@@ -1670,31 +1667,24 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 					break;
 				}
 				/*find the last ':'*/
-				int i;
-				int counter = 0;
 				int pos;
-				for(i = 0; counter < 3; i++){
-					if(buffer[i] == ':'){ 
-						counter++;
+				for(int i = 0, count = 0; count < 3 ; i++){
+					if(buffer[i] == ':') {
+						count++;
 						pos = i;
-					} 
-				}
-				char *users = strdup(&buffer[pos+1]);
-				if(!users){
-					/*
-					 * if strdup failes we do not modify the file
-					 * we just leave the old content in place to avoid
-					 * data corruption
-					 * */
-					fprintf(stderr,"can't delete the group %s, for user %s.\n",group_name,username);
-					fputs(buffer,tmp);
-					status = ERR_GU; 
-					break;
+					}
 				}
 
-				size_t len = strlen(users);
-				char new_entry[len];
-				memset(new_entry,0,len);
+				size_t us_l = strlen(&buffer[pos+1])+1;
+
+				char users[us_l];
+				memset(users,0,us_l);
+				
+				strncpy(users,&buffer[pos+1],us_l);
+				clean(users,'\n');
+
+				char new_entry[us_l];
+				memset(new_entry,0,us_l);
 				/*check if the users string has commas*/
 				if(str_contain_commas(users)) {
 					char *s = strtok(users,",");
@@ -1706,17 +1696,13 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 						 * */
 						fprintf(stderr,"can't delete the group %s, for user %s.\n",group_name,username);
 						fputs(buffer,tmp);
-						free(users);
 						status = ERR_GU; 
 						break;
 					}
 					size_t username_l = strlen(username);
 					size_t old_l = 0;
 					do{
-						size_t pre_l = strlen(s);
-						clean(s,'\n');
 						size_t toke_l = strlen(s);
-						toke_l += (pre_l > toke_l) ? 1 : 0;
 						if(strlen(s) == username_l) {
 							if(strncmp(username,s,username_l) != 0){
 								if(old_l == 0){
@@ -1733,28 +1719,29 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 								strncpy(new_entry,s,toke_l);
 							}else{
 								strncpy(&new_entry[old_l+1],s,toke_l);
+								old_l++;
 							}
 							old_l += toke_l;
 							new_entry[old_l] = ',';
 						}
 					}while((s = strtok(NULL,",")));
-
-					new_entry[old_l] = '\n';
+					
+					new_entry[old_l] = '\0';
 					/*zero out the rest of the buffer (line)*/
 					memset(&buffer[pos+1],0,strlen(&buffer[pos+1]));
 					/*copy the new users to the buffer*/
 					strncpy(&buffer[pos+1],new_entry,strlen(new_entry));
 					/*write the new entry to tmp file*/ 
 					fputs(buffer,tmp);
-					free(users);
+					fputs("\n",tmp);
+
 
 					break;
 				}else{
-					free(users);
 					/*no commas in the user strin so it means we only have one user*/
 					memset(&buffer[pos+1],0,buf_size - (pos+1));
-					buffer[pos+1] = '\n';
 					fputs(buffer,tmp);
+					fputs("\n",tmp);
 					break;
 				}
 			}
