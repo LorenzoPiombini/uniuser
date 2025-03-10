@@ -109,7 +109,11 @@ ENONE_G     /*the group  does not exist*/
 
 `add_user()` returns a value ≥ 1000 on success (UID).
 values < 1000 indicate an error wich will be one of the follwing:
-```c EMAX_U ```
+- -1 as a generic error
+- `EMAX_U`
+- `EALRDY_U`
+- `ESGID`
+- `ESUID`
 
 
 
