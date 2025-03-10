@@ -103,7 +103,7 @@ struct sys_param {
 	unsigned int SUB_GID_MIN;
 	unsigned int SUB_GID_MAX;
 	unsigned int SUB_GID_COUNT;
-	char *ENCRYPT_METHOD;
+	char ENCRYPT_METHOD[300];
 };
 
 

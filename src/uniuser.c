@@ -183,11 +183,11 @@ static int get_save_pswd(char *username, char **svd_pswd)
 	memset(line,0,columns);
 
 	while(fgets(line,columns,fp)) {
-		char *buff = strdup(line);
-		if(!buff){
-			fprintf(stderr,"strdup() failed, %s:%d.\n",__FILE__,__LINE__-2);
-			return -1;
-		}
+		size_t l = strlen(line)+1;
+		char buff[l];
+		memset(buff,0,l);
+		strncpy(buff,line,l);
+
 		char *t = strtok(buff,":");
 		if(!t){
 			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
@@ -195,13 +195,11 @@ static int get_save_pswd(char *username, char **svd_pswd)
 		}
 		if(strlen(username) != strlen(t)){
 			memset(line,0,columns);
-			free(buff);
 			continue;
 		}
 		
 		if(strncmp(username,t,strlen(t)) != 0){
 			memset(line,0,columns);
-			free(buff);
 			continue;
 		}
 
@@ -213,10 +211,8 @@ static int get_save_pswd(char *username, char **svd_pswd)
 		*svd_pswd = strdup(t);
 		if(!(*svd_pswd)) {
 			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
-			free(buff);
 			return -1;
 		}else {
-			free(buff);
 			return 0;
 		}
 
@@ -287,12 +283,7 @@ int add_user(char *username, char *paswd, char *full_name)
 		param.PASS_MAX_DAYS = PASS_MAX_DAYS;
 		param.PASS_MIN_DAYS = PASS_MIN_DAYS;
 		param.PASS_WARN_AGE = PASS_WARN_AGE;
-		param.ENCRYPT_METHOD = strdup(ENCRYPT_METHOD);
-		if(!param.ENCRYPT_METHOD) {
-			printf("strdupfaild");
-			status = err;
-			goto clean_on_exit;
-		}
+		strncpy(param.ENCRYPT_METHOD,ENCRYPT_METHOD,strlen(ENCRYPT_METHOD)+1);
 	}
 
 	int uid = last_UID(PASSWD);
@@ -540,7 +531,7 @@ int add_user(char *username, char *paswd, char *full_name)
 		goto clean_on_exit;
 	}
 	
-	if(chown(hm_path,uid,uid) == -1) {
+	if(chown(hm_path,uid,(uid == gid || gid < uid) ? uid : gid) == -1) {
 		fprintf(stderr,"can't change ownership.\n");
 		if(clean_up_file(username,SHADOW) == -1 ||
 		   clean_up_file(username,PASSWD) == -1 ||
@@ -552,9 +543,9 @@ int add_user(char *username, char *paswd, char *full_name)
 					"clean up files failed. %s:%d.\n",
 					__FILE__,__LINE__-7);
 		}
-        /* remove the empty directory */
-        if(rmdir(hm_path) == -1)
-            fprintf(stderr,"can't remove %s\n",hm_path);
+		/* remove the empty directory */
+		if(rmdir(hm_path) == -1)
+			fprintf(stderr,"can't remove %s\n",hm_path);
 
 		status = err;
 		goto clean_on_exit;
@@ -574,8 +565,8 @@ int add_user(char *username, char *paswd, char *full_name)
 					__FILE__,__LINE__-7);
 		}
 
-        if(clean_home_dir(hm_path) == -1)
-            fprintf(stderr,"can't remove %s\n",hm_path);
+		if(clean_home_dir(hm_path) == -1)
+			fprintf(stderr,"can't remove %s\n",hm_path);
 
 		status = err;
 		goto clean_on_exit;
@@ -1101,11 +1092,8 @@ static int get_sys_param(struct sys_param *param)
 
 		if(strstr(buffer,"ENCRYPT_METHOD")) {
 			if(sscanf(buffer,"%s %s",key,value) == 2){
-				(*param).ENCRYPT_METHOD = strdup(value);
-				if(!(*param).ENCRYPT_METHOD) {
-					status = EXIT_FAILURE;
-					goto clean_on_exit;
-				}	
+				size_t l = strlen(value) +1;
+				strncpy((*param).ENCRYPT_METHOD,value,l);
 				memset(buffer,0,file_column);
 				continue;
 			}
@@ -1115,9 +1103,6 @@ static int get_sys_param(struct sys_param *param)
 	
 clean_on_exit:
 	fclose(fp);
-	if(status == EXIT_FAILURE)
-		if((*param).ENCRYPT_METHOD)
-			free((*param).ENCRYPT_METHOD);
 
 	return status;	
 
@@ -1561,12 +1546,12 @@ static int clean_up_file(char *username,char *file_name) {
 			memset(buffer,0,buf_size);
 		}else if(strstr(buffer,username) != NULL){
 		
-			char* buf_cpy = strdup(buffer);
-			if(!buf_cpy){
-				fclose(fp);
-				fprintf(stderr,"strdup failed %s:%d",__FILE__,__LINE__-3);
-				return -1;
-			}
+			size_t l = strlen(buffer)+1;
+			char buf_cpy[l];
+			memset(buff,0,l);
+
+			strncpy(buf_cpy,0,l);
+
 			char *t = strtok(buf_cpy,":");
 			if(!t){
 				fclose(fp);
@@ -1576,10 +1561,6 @@ static int clean_up_file(char *username,char *file_name) {
 
 			if(strncmp(username,t,strlen(t)) != 0){
 				fputs(buffer,tmp);
-				free(buf_cpy);
-			}else{
-				free(buf_cpy);
-			}
 		}
 		memset(buffer,0,buf_size);
 	}
@@ -2669,12 +2650,11 @@ static int str_contain_commas(char *str)
 
 static int extract_salt(char *pswd_hashed, char **salt)
 {
-	
-	char *buff = strdup(&pswd_hashed[7]);
-	if(!buff){
-		fprintf(stderr,"strdup() failed, %s:%d.\n",__FILE__,__LINE__-2);
-		return -1;
-	}	
+	size_t l = strlen(&pswd_hashed[7])+1;
+	char buff[l];
+	memset(buff,0,l);
+
+	strncpy(buff,&pswd_hashed[7],l);
 
 	char *t = strtok(buff,"$");
 	if(!t){
