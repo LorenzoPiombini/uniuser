@@ -51,6 +51,7 @@
 #define RULE_OFF 0
 
 /* errors */
+#define EMAX_G 9 /*exeed the maximum gid number*/
 #define EMAX_U 10 /*exeed the maximum user number*/
 #define EALRDY_U 11 /*user already exist*/
 #define ESGID 12 /*SUB_GID_MAX overflowed */

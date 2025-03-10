@@ -140,7 +140,6 @@ int main(int arg, char** argv)
 	}
 
 
-	return 0;
 ret = 0;
 	char *group_name = "isThisANEWnewGroup?";
 	if((ret = create_group(group_name)) != 0){

@@ -313,7 +313,7 @@ int add_user(char *username, char *paswd, char *full_name)
 		goto clean_on_exit;
 	} else if(sub_gid == ESGID) {
 		printf("maximum nr of sub groubs id reached.\n");
-		status = err;
+		status = ESGID;
 		goto clean_on_exit;
 	}	
 
@@ -326,7 +326,7 @@ int add_user(char *username, char *paswd, char *full_name)
 		goto clean_on_exit;
 	}else if(sub_uid == ESUID) {
 		printf("maximum nr of sub user id reached.\n");
-		status = err;
+		status = ESUID;
 		goto clean_on_exit;
 	}
 	
@@ -859,13 +859,13 @@ int create_group(char* group_name)
 		goto clean_on_exit;
 	}
 
-	int uid = last_UID(GP);
-	if(uid == UID_MAX) {
-		status = EMAX_U;
+	int gid = last_UID(GP);
+	if(gid == GID_MAX) {
+		status = EMAX_G;
 		goto clean_on_exit;
 	}
     	
-	if(group_write(group_name,++uid) == -1){
+	if(group_write(group_name,++gid) == -1){
 		fprintf(stderr,"can't write to %s.\n",GP);
 		status = err;
 		goto clean_on_exit;
