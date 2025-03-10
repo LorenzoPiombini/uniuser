@@ -22,7 +22,7 @@ allowing you to create users securely without relying on shell exposure or risky
 int crypt_pswd(char *paswd, char **hash,char *salt);
 int add_user(char *username, char *paswd, char *full_name);
 int login(char *username, char *passwd, int mod);
-int get_user_info(char *username, char **home_pth, int *uid, int *is_admin);
+int get_user_info(char *username, struct user_info *ui); 
 int del_user(char *username, int mod);
 int create_group(char* group_name);
 int del_group(char *group_name);
@@ -92,8 +92,9 @@ int main(void) {
 
 ## Return Values
 
-These are the error that the endpointscan return:
-```c
+These are the errors that endpoints can return:
+```plain text
+EMAX_G      /*exeed the maximum gid number*/ 
 EMAX_U      /*exeed the maximum user number*/
 EALRDY_U    /*user already exist*/
 ESGID       /*SUB_GID_MAX overflowed */
@@ -107,16 +108,33 @@ EALRDY_G    /*group already exist*/
 ENONE_G     /*the group  does not exist*/
 ```
 
+all the fucntions could return a generic error -1,and a message will be display to the console.
+
 `add_user()` returns a value ≥ 1000 on success (UID).
 values < 1000 indicate an error wich will be one of the follwing:
-- -1 as a generic error
 - `EMAX_U`
 - `EALRDY_U`
 - `ESGID`
 - `ESUID`
 
 
+`del_user` returns 0 on success.
+erros :
+- `ENONE_U`
 
+`del_group()` returns 0 on success.
+erros :
+- `ENONE_G`
+
+`edit_group_user()` returns 0 on success.
+erros :
+- `ENONE_G`
+- `ENONE_U`
+
+`create_group()` returns 0 on success.
+erros :
+- `EALRDY_G`
+- `EMAX_G`
 
 ## Security
 
