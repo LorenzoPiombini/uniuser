@@ -1264,8 +1264,18 @@ static unsigned char user_already_exist(char *username)
 
 	while(fgets(line,columns,fp)) {
 		if(strstr(line,username) != NULL){
-			fclose(fp);
-			return 1;
+			char *t = strtok(line,":");
+			if(!t){
+				fprintf(stderr,"strtok() failed %s:%d",__FILE__,__LINE__);
+				fclose(fp);
+				return -1;
+			}
+			if(strlen(username) == strlen(t)){
+				if(strncmp(username,t,strlen(t)) == 0){
+					fclose(fp);
+					return 1;
+				}
+			}
 		}
 
 		memset(line,0,columns);
