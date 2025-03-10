@@ -576,8 +576,6 @@ int add_user(char *username, char *paswd, char *full_name)
     status = uid;
 
 clean_on_exit:
-	if(param.ENCRYPT_METHOD)
-		free(param.ENCRYPT_METHOD);
 
 	if(lock)
 		unlock_files();
@@ -1548,9 +1546,9 @@ static int clean_up_file(char *username,char *file_name) {
 		
 			size_t l = strlen(buffer)+1;
 			char buf_cpy[l];
-			memset(buff,0,l);
+			memset(buf_cpy,0,l);
 
-			strncpy(buf_cpy,0,l);
+			strncpy(buf_cpy,buffer,l);
 
 			char *t = strtok(buf_cpy,":");
 			if(!t){
@@ -1559,7 +1557,7 @@ static int clean_up_file(char *username,char *file_name) {
 				return -1;
 			}
 
-			if(strncmp(username,t,strlen(t)) != 0){
+			if(strncmp(username,t,strlen(t)) != 0)
 				fputs(buffer,tmp);
 		}
 		memset(buffer,0,buf_size);
@@ -2659,13 +2657,12 @@ static int extract_salt(char *pswd_hashed, char **salt)
 	char *t = strtok(buff,"$");
 	if(!t){
 		fprintf(stderr,"strtok() failed %s:%d.",__FILE__,__LINE__-2);
-		free(buff);	
 		return -1;
 	}
 
-	size_t l = strlen(t)+8;
-	char full_st[l];
-	memset(full_st,0,l);
+	size_t len = strlen(t)+8;
+	char full_st[len];
+	memset(full_st,0,len);
 
 	strncat(full_st,pswd_hashed,7);
 	strncat(&full_st[7],t,strlen(t));
@@ -2673,10 +2670,8 @@ static int extract_salt(char *pswd_hashed, char **salt)
 	*salt = strdup(full_st);
 	if(!(*salt)){
 		fprintf(stderr,"strdup() failed, %s:%d.\n",__FILE__,__LINE__-2);
-		free(buff);	
 		return -1;
 	}
-	free(buff);	
 	return 0;
 
 }
@@ -2742,6 +2737,7 @@ static int get_full_name(char *username, char *full_name)
 	fclose(fp);
 	return -1;
 }
+
 static void clean(char *str, char item)
 {
 	for(;*str != '\0';str++){
