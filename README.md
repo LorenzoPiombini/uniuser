@@ -92,9 +92,27 @@ int main(void) {
 
 ## Return Values
 
-`add_user()` returns a value ≥ 1000 on success (UID).
+These are the error that the endpointscan return:
+```c
+EMAX_U      /*exeed the maximum user number*/
+EALRDY_U    /*user already exist*/
+ESGID       /*SUB_GID_MAX overflowed */
+ESUID       /*SUB_UID_MAX overflowed */
+ECHAR       /* passowrd contain KILL or ERASE system char */
+ENONE_U     /* user does not exist */
+EALRDY_GU   /*group already added to user*/
+ERR_GU      /*error in delating the group*/
+ENONE_GU    /*the user is not assign to this group */
+EALRDY_G    /*group already exist*/
+ENONE_G     /*the group  does not exist*/
+```
 
-Values < 1000 indicate an error.
+`add_user()` returns a value ≥ 1000 on success (UID).
+values < 1000 indicate an error wich will be one of the follwing:
+```c EMAX_U ```
+
+
+
 
 ## Security
 
@@ -123,4 +141,5 @@ the function checks also if the password contains kill or erase chars
 you can turn off this security criteria by passing to the `paswd_chk()` endpoint the parameter RULE_OFF  
 this way the program will check only for kill char `^U` or erase char `^?` which they might create problems if you
 decide to echo passwords, or in some embedded systems.  
+
 
