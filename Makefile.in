@@ -1,4 +1,5 @@
-TARGET = user_manager
+TARGETt := test
+TARGET = /bin/userctl
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 OBJ_PROD = $(patsubst src/%.c, obj/%_prod.o, $(SRC))
@@ -10,9 +11,9 @@ LIBDIR = /usr/local/lib
 INCLUDEDIR = /usr/local/include
 SHAREDLIBuser = lib$(LIBNAMEuser).so
 
-default:$(TARGET)
+default:$(TARGETt)
 
-prod:$(TARGET)_prod
+prod:$(TARGET)
 
 clean:
 	sudo rm -r obj/*.o
@@ -46,7 +47,7 @@ library:
 libraryPR:
 	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuserPR)
 
-$(TARGET):$(OBJ)
+$(TARGETt):$(OBJ)
 	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
 		gcc -o $@ $? -lcrypt -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack ;\
 	else\
@@ -56,7 +57,7 @@ $(TARGET):$(OBJ)
 obj/%.o:src/%.c
 	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIC -fsanitize=address
 
-$(TARGET)_prod:$(OBJ_PROD)
+$(TARGET):$(OBJ_PROD)
 	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
 		gcc -o $@ $? -lcrypt -lstrOP -pie -z relro -z now -z noexecstack ;\
 	else\

@@ -1,228 +1,191 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 #include "uniuser.h"
 
-int main(int arg, char** argv)
+#define MAX_LENGTH 600
+
+int main(int argc, char** argv)
 {
-    char Prog[] = "user_manager";
-    if(arg < 3 || arg > 4) {
-        fprintf(stderr,
-                "Usage: ./%s [username] [password] (full name)\nfull name is optional,\n",Prog);
-        return EXIT_FAILURE;
-    }
+	char Prog[] = "userctl";
+	if(argc < 2) {
+		fprintf(stderr,"Usage: ./%s [username] \n\
+				Usage: ./%s -OPTIONS\n",Prog,Prog);
+		return -1;
+	}
 
-    char* username = argv[1];
-    char* password = argv[2];
-    char* full_name = NULL;
+	int ret = 0;
+	int opt = 0;
+	unsigned char operation = 0;
+	char username[MAX_LENGTH];
+	char password[MAX_LENGTH];
+	char full_name[MAX_LENGTH];
+	char group_name[MAX_LENGTH];
+	memset(username,0,MAX_LENGTH);
+	memset(password,0,MAX_LENGTH);
+	memset(full_name,0,MAX_LENGTH);
+	memset(group_name,0,MAX_LENGTH);
 
-    if(arg == 4)
-	    full_name = argv[3];
-
-	int ret = 0; 
-	ret = add_user(username,password,full_name);
-	if(ret < 1000) {
+	
+	while((opt = getopt(argc,argv,"u:dg:p:e")) != -1){
+		switch(opt){
+		case 'u':
+			operation = operation | USER;
+			strncpy(username,optarg,strlen(optarg)+1);
+			break;
+		case 'd': 
+			operation = operation | DEL;
+			break;
+		case 'g':
+			operation = operation | GROUP;
+			strncpy(group_name,optarg,strlen(optarg)+1);
+			break;
+		case 'p':
+			operation = operation | PWD;
+			strncpy(password,optarg,strlen(optarg)+1);	
+			break;
+	        case 'e':
+			operation = operation | EDIT_GROUP_USER;
+			break;	
+		default:
+			break;
+		}	
+	}
+	
+	
+	if(optind == 1){
+		strncpy(username,argv[1],strlen(argv[1])+1);
+		ret = add_user(username,NULL,NULL);
 		switch(ret) {
 		case EMAX_U:  
-			fprintf(stderr,"exeed the maximum user number.\n");
-			break;
+			fprintf(stderr,"(%s): exceeded the maximum user number.\n\
+					(%s): user '%s' not added.\n",Prog,Prog,username);
+			return -1;
 		case EALRDY_U: 
-			fprintf(stderr,"user already exist.\n");
-		        break;
+			fprintf(stderr,"(%s): user '%s' already exist.\n",Prog,username);
+			return -1;
 		case ESGID: 
-			fprintf(stderr,"SUB_GID_MAX overflowed.\n");
-			break;
+			fprintf(stderr,"(%s): SUB_GID_MAX overflowed.\n",Prog);
+			return -1;
 		case ESUID: 
-			fprintf(stderr,"SUB_UID_MAX overflowed.\n");
-			break;
-		case ECHAR: 
-			fprintf(stderr,"passowrd contain KILL or ERASE system char.\n");
-			break;
+			fprintf(stderr,"(%s): SUB_UID_MAX overflowed.\n",Prog);
+			return -1;
+		case -1:
+			fprintf(stderr,"(%s): adding user '%s' failed!\n",Prog,username);
+			return -1;
 		default:
-			break;
+			fprintf(stdout,"(%s): user '%s', added.\n",Prog,username);
+			return 0;
 		}
-		fprintf(stderr,"%s: adding user failed!\n",Prog);
-		return EXIT_FAILURE;
 	}
-
-
-	fprintf(stdout,"%s: user %s, added.\n",Prog,username);
-
-	if((ret = del_user(username,DEL_SAFE)) != 0){
+	
+	switch(operation){
+	case DEL_USER:
+		ret = del_user(username,DEL_SAFE);
 		switch(ret){
 		case ENONE_U: 
-			fprintf(stderr,"user does not exist.\n");
+			fprintf(stderr,"(%s): user '%s' does not exist.\n",Prog,username);
 			break;
+		case -1:
+			fprintf(stdout,"(%s): can't delete user '%s'.\n",Prog,username);
+			return -1;
 		default:
+			fprintf(stdout,"(%s): user '%s', deleted.\n",Prog, username);
 			break;
 		}
-		fprintf(stdout,"%s: del_user() failed.\n",Prog);
-		return EXIT_FAILURE;
-	}else{
-		fprintf(stdout,"user %s, deleted.\n",username);
-	}
-
-
-	if(login("test1","pass1",STD) == -1)
-		printf("\nlogin failed\n");
-	else
-		printf("login succes\n");
-
-
-	char *test = "CIAO";
-	char *testG = "thisIsAGroup";
-	int mod = DEL_GU;
-	ret = edit_group_user(test,testG,mod);
-	switch(ret) {
-	case ENONE_U:
-		fprintf(stderr,"user does not exist.\n");
 		break;
-	case ERR_GU:
-		fprintf(stderr,"DEL_GU failed.\n");
-		break;
-	case ENONE_GU:
-		fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
-		break;
-	case ENONE_G:
-		fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
-		break;
-	case 0:
-		fprintf(stderr,"operation %s successful!\n", mod == DEL_GU ? "DEL_GU" : "ADD_GU");
-		break;
-	default:
-		break;
-	}
-
-	test = "Kings";
-	testG = "thisIsAGroup";
-	ret = edit_group_user(test,testG,mod);
-	
-	switch(ret) {
-	case ENONE_U:
-		fprintf(stderr,"user does not exist.\n");
-		break;
-	case ERR_GU:
-		fprintf(stderr,"DEL_GU failed.\n");
-		break;
-	case ENONE_GU:
-		fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
-		break;
-	case ENONE_G:
-		fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
-		break;
-	case 0:
-		fprintf(stderr,"operation %s successful!\n", mod == DEL_GU ? "DEL_GU" : "ADD_GU");
-		break;
-	default:
-		break;
-	}
-
-	test = "lpiombini";
-	testG = "thisIsAGroup";
-	ret = edit_group_user(test,testG,mod);
-	switch(ret) {
-	case ENONE_U:
-		fprintf(stderr,"user does not exist.\n");
-		break;
-	case ERR_GU:
-		fprintf(stderr,"DEL_GU failed.\n");
-		break;
-	case ENONE_GU:
-		fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,test,testG);
-		break;
-	case ENONE_G:
-		fprintf(stderr,"%s: group %s does not exist.\n",Prog,testG);
-		break;
-	case 0:
-		fprintf(stderr,"operation %s successful!\n", mod == DEL_GU ? "DEL_GU" : "ADD_GU");
-		break;
-	default:
-		break;
-	}
-
-
-ret = 0;
-	char *group_name = "isThisANEWnewGroup?";
-	if((ret = create_group(group_name)) != 0){
+	case GROUP:
+		ret = create_group(group_name);
 		switch(ret) {
 		case EALRDY_G: 
-			fprintf(stderr,"group already exist\n");
+			fprintf(stderr,"(%s): group '%s' already exist\n",Prog,group_name);
 			break;
 		default:
+			fprintf(stderr,"(%s): group '%s' created.\n",Prog,group_name);
 			break;
 		}
-	}else {
-		fprintf(stderr,"group added!\n");
-	}
-
-	ret = 0;
-
-	if((ret = edit_group_user(username,group_name,ADD_GU)) != 0){
+		break;
+	case USER_AND_PSWD:
+		ret = add_user(username,password,NULL);
 		switch(ret) {
-		case ENONE_U:
-			fprintf(stderr,"user does not exist.\n");
+		case EMAX_U:  
+			fprintf(stderr,"(%s): exceeded the maximum user number.\n\
+					(%s): user '%s' not added.\n",Prog,Prog,username);
+			return -1;
+		case EALRDY_U: 
+			fprintf(stderr,"(%s): user '%s' already exist.\n",Prog,username);
 			break;
-		case ERR_GU:
-			fprintf(stderr,"DEL_GU failed.\n");
-			break;
-		case ENONE_GU:
-			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,username,group_name);
-			break;
-		case ENONE_G:
-			fprintf(stderr,"%s: group %s does not exist.\n",Prog,group_name);
-			break;
+		case ESGID: 
+			fprintf(stderr,"(%s): SUB_GID_MAX overflowed.\n",Prog);
+			return -1;
+		case ESUID: 
+			fprintf(stderr,"(%s): SUB_UID_MAX overflowed.\n",Prog);
+			return -1;
+		case -1:	
+			fprintf(stderr,"(%s): adding user '%s' failed.\n",Prog,username);
+			return -1;
 		default:
+			fprintf(stdout,"(%s): user %s, added.\n",Prog,username);
 			break;
 		}
-	} else {
-		printf("group added to user %s!\n",username);
-	}
-
-	char *list = NULL;
-	if(list_group(username, &list) == -1 ){
-		fprintf(stderr,"no groups for user %s\n",username);
-	
-	}
-
-	fprintf(stdout,"group list for %s: %s\n",username,list);
-	/*YOU HAVE TO FREE LIST*/
-	free(list);
-
-
-	
-	ret = 0;
-	if((ret = edit_group_user(username,group_name,DEL_GU)) != 0){
-		switch(ret) {
-		case ENONE_U:
-			fprintf(stderr,"user does not exist.\n");
-			break;
-		case ERR_GU:
-			fprintf(stderr,"DEL_GU failed.\n");
-			break;
-		case ENONE_GU:
-			fprintf(stderr,"%s user %s not assaign to group %s.\n",Prog,username,group_name);
-			break;
-		case ENONE_G:
-			fprintf(stderr,"%s: group %s does not exist.\n",Prog,group_name);
-			break;
-		default:
-			break;
-		}
-	} else {
-		printf("group deleted from user!");
-	}
-
-	ret = 0;
-	if((ret = del_group(group_name)) != 0){
+		break;
+	case DEL_GROUP:
+		ret = del_group(group_name);
 		switch(ret){
 		case ENONE_G:	
-			fprintf(stderr,"%s: group %s does not exist.\n",Prog,group_name);
+			fprintf(stderr,"(%s): group '%s' does not exist.\n",Prog,group_name);
 			break;
+		case -1:
+			fprintf(stderr,"(%s): can't delete group '%s'.\n",Prog,group_name);
 		default:
-			fprintf(stderr,"%s: can't delete group %s.\n",Prog,group_name);
+			fprintf(stdout,"(%s): group '%s' deleted.\n",Prog,group_name);
 			break;
 		}
-	} else {
-		fprintf(stdout,"Group %s deleted.\n",group_name);
+		break;
+	case ADD_GROUP_TO_USER:
+		ret = edit_group_user(username,group_name,ADD_GU);
+		switch(ret) {
+			case ENONE_U:
+				fprintf(stderr,"(%s): user '%s' does not exist.\n",Prog, username);
+				break;
+			case ENONE_G:
+				fprintf(stderr,"(%s): group '%s' does not exist.\n",Prog,group_name);
+				break;
+			case -1:
+				fprintf(stderr,"(%s): can't add user '%s' to group '%s'.\n",Prog,username,group_name);
+				break;
+			default:
+				fprintf(stderr,"(%s): user '%s' added to group '%s'.\n",Prog,username,group_name);
+				break;
+		}
+		break;
+	case DEL_GROUP_FROM_USER :
+		ret = edit_group_user(username,group_name,DEL_GU);
+		switch(ret) {
+		case ENONE_U:
+			fprintf(stderr,"(%s): user '%s' does not exist.\n",Prog, username);
+			break;
+		case ERR_GU:
+			fprintf(stderr,"(%s)can't remove user '%s' form group '%s'.\n",Prog,username,group_name);
+			break;
+		case ENONE_GU:
+			fprintf(stderr,"(%s): user '%s' not assigned to group '%s'.\n",Prog,username,group_name);
+			break;
+		case ENONE_G:
+			fprintf(stderr,"(%s): group '%s' does not exist.\n",Prog,group_name);
+			break;
+		case -1:
+			fprintf(stderr,"(%s): can't remove user '%s' from group '%s'.\n",Prog,username,group_name);
+			break;
+		default:
+			fprintf(stderr,"(%s): user '%s' removed from group '%s'.\n",Prog,username,group_name);
+			break;
+		}
+		break;
+	default:
+		fprintf(stderr,"(%s): invalid options or operation not allowed.\n",Prog);
+		return -1;
 	}
-	return EXIT_SUCCESS;
+		
+	return 0;
 }
