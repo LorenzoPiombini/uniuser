@@ -8,6 +8,9 @@
 #define CONF "/etc/uniuser/uniuser.conf"
 #define rUID "/etc/uniuser/UIDs"
 #define rGID "/etc/uniuser/GIDs"
+#define REAL_GIDs "/etc/uniuser/real_GIDs"
+#define REAL_UIDs "/etc/uniuser/real_UIDs"
+#define TEMP_CNFL "/etc/uniuser/temp"
 
 #define REUSE 0
 #define REUSE_UID_GID 69
@@ -69,6 +72,7 @@
 #define ENONE_GU 18 /*the user is not assign to this group */
 #define EALRDY_G 19 /*group already exist*/
 #define ENONE_G 20 /*the group  does not exist*/
+#define NO_GIDs 21 /*no reusalble GIds*/
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/

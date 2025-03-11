@@ -100,6 +100,9 @@ int main(int argc, char** argv)
 		case EALRDY_G: 
 			fprintf(stderr,"(%s): group '%s' already exist\n",Prog,group_name);
 			break;
+		case -1:
+			fprintf(stderr,"(%s): can't create group '%s'.\n",Prog,group_name);
+			break;
 		default:
 			fprintf(stderr,"(%s): group '%s' created.\n",Prog,group_name);
 			break;

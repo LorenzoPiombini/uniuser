@@ -17,6 +17,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <grp.h>
 #include <ctype.h>
 #include <termios.h>
 #include <dirent.h>
@@ -71,9 +72,10 @@ static int extract_salt(char *pswd_hashed, char **salt);
 static int start_user_session(struct passwd *pw);
 static int get_full_name(char *username, char *full_name);
 static void clean(char *str, char item);
-static int get_conf();
 static int save_IDs(char *file_name, int ID);
 static int get_conf(int conf);
+static int get_reuse_ID(char *file_name);
+static int get_real_IDs(char *file_name);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -714,6 +716,19 @@ int del_group(char *group_name)
 		return -1;
 	}
 
+	if( get_conf(REUSE) == REUSE_UID_GID){
+		struct group *g = getgrnam(group_name);
+		if(!g) {
+			fprintf(stderr,"can't retrive struct group %s:%d",__FILE__,__LINE__-2);
+			return -1;
+		}	
+
+		if(save_IDs(rGID,g->gr_gid) != 0){
+			fprintf(stderr,"can't save GID.\n");
+			return -1;
+		}	
+	}	
+
 	if(lock_file(G_SHADOW_LCK) == -1 ||
 			lock_file(GP_LCK) == -1){
 		fprintf(stderr,"cannot acquire lock on files.\n");
@@ -846,18 +861,37 @@ int create_group(char* group_name)
 
 	lock = 1;
 
+	int gid = 0;
+	if(get_conf(REUSE) == REUSE_UID_GID ){
+		gid = get_reuse_ID(rGID);
+		if(gid <= 0){
+			status = -1;
+			goto clean_on_exit;
+		} else if(gid == NO_GIDs){
+			gid = last_UID(GP);
+			if(gid == GID_MAX) {
+				status = EMAX_G;
+				goto clean_on_exit;
+			}
+			gid++;
+	
+		}
+	} else {
+		gid = last_UID(GP);
+		if(gid == GID_MAX) {
+			status = EMAX_G;
+			goto clean_on_exit;
+		}
+		gid++;
+	}
+
 	if(gshdw_write(group_name) == -1){
 		fprintf(stderr,"can't write to %s.\n",G_SHADOW);
 		goto clean_on_exit;
 	}
 
-	int gid = last_UID(GP);
-	if(gid == GID_MAX) {
-		status = EMAX_G;
-		goto clean_on_exit;
-	}
-    	
-	if(group_write(group_name,++gid) == -1){
+
+	if(group_write(group_name,gid) == -1){
 		fprintf(stderr,"can't write to %s.\n",GP);
 		status = err;
 		goto clean_on_exit;
@@ -2781,7 +2815,8 @@ static int get_conf(int conf)
 				continue;
 			}
 
-			if(strncmp(line,"REUSE=yes",strlen(line))){
+			clean(line,'\n');
+			if(strncmp(line,"REUSE=yes",strlen(line)) == 0){
 				fclose(fp);
 				return REUSE_UID_GID;
 			}
@@ -2805,17 +2840,76 @@ static int save_IDs(char *file_name, int ID)
 		return -1;
 	}
 	
-	size_t l = number_of_digit(ID)+1;
+	/* +2 becuase '\0' and '\n'*/
+	size_t l = number_of_digit(ID)+2;
 	char num[l];
 	memset(num,0,l);
 
-	if(snprintf(num,l,"%d",ID) < 0){
+	if(snprintf(num,l,"%d\n",ID) < 0){
 		fprintf(stderr,"snprintf() failed %s:%d.\n",__FILE__,__LINE__-1);
 		return -1;
 	}
 
 	fputs(num,fp);
-
 	fclose(fp);
 	return 0;
 }
+
+
+static int get_reuse_ID(char *file_name)
+{
+	FILE *fp = fopen(file_name,"r");
+	if(!fp){
+		fprintf(stderr,"can't open %s.\n",file_name);
+		return -1;
+	}
+
+	FILE *tmp = fopen(TEMP_CNFL,"w");
+	if(!tmp){
+		fprintf(stderr,"can't open %s.\n",TEMP_CNFL);
+		return -1;
+	}
+
+	int id = 0;
+	int found = 0;
+	int column = 7;
+	char line[column];
+	memset(line,0,column);
+	
+	if(fgets(line,column,fp)){
+		clean(line,'\n');
+		char *endptr;
+		int number = (int) strtol(line,&endptr,10);
+		if(*endptr == '\0'){ 
+			id = number;
+			found = 1;
+		}
+		memset(line,0,column);
+	}
+
+	
+	while(fgets(line,column,fp)){
+		fputs(line,tmp);		
+		memset(line,0,column);
+	}
+
+	fclose(tmp);
+	fclose(fp);
+	
+	if(remove(file_name) != 0) {
+		fprintf(stderr,"can't delete %s", file_name);
+		return -1;
+	}
+	
+	if(rename(TEMP_CNFL,file_name) != 0) {
+		fprintf(stderr,"can't rename file %s.\n",TEMP_CNFL);
+		return -1;
+	}
+
+	if(found)
+		return id; /* success*/ 
+	else 
+		return NO_GIDs;
+	
+}
+
