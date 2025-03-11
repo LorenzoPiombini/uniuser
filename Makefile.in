@@ -11,7 +11,7 @@ LIBDIR = /usr/local/lib
 INCLUDEDIR = /usr/local/include
 SHAREDLIBuser = lib$(LIBNAMEuser).so
 
-default:$(TARGETt) fileRule
+default: mv-config.h $(TARGETt) fileRule
 
 prod:$(TARGET)
 
@@ -20,10 +20,9 @@ conf:
 		echo "creating uniuser directory..." ;\
 		sudo mkdir /etc/uniuser ;\
 	fi
-
 fileRule: conf
 	@if [ ! -f /etc/uniuser/uniuser.conf ]; then\
-		echo "# /etc/uniuser/uniuser.conf - Configuration control definitions for the uniuser package." > /
+		echo "# /etc/uniuser/uniuser.conf - Configuration control definitions for the uniuser package." > /etc/uniuser/uniuser.conf ;\
 		echo "# line with '#' are comment, white lines are ignored" >>  /etc/uniuser/uniuser.conf ;\
 		echo "#" >> /etc/uniuser/uniuser.conf ;\
 		echo "# the rule REUSE=no is the default mode." >> /etc/uniuser/uniuser.conf ;\
