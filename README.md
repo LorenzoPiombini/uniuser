@@ -58,7 +58,7 @@ $ sudo make build
 ```
 
 This will compile the library and install it on your system, along with a test program called `test`.
-the small routine will be located inside of uniuser direcotry `./test` will be a behave in a similar fashion as `useradd` does.   
+the small routine will be located inside of uniuser direcotry. `./test` will behave in a similar fashion as `useradd` does.   
 You can use it to test some of the library feature, for example, you can run 
 
 ```bash
@@ -78,24 +78,24 @@ if you want to assign this group to an user, you can achive that by doing:
 $ sudo ./test -eg aNewGroup -u User67
 ```
 
-if you want to remove this user gorm the group:
+if you want to remove this user from the group:
 
 ```bash
 $ sudo ./test -edg aNewGroup -u User67 
 ```
 
-you got the idea, keep in mind that sudo make build is the Makefile rule taht i used to test my code on my machine  
-during testing I often use the flag -fsanitize=address to compile the objects.   
+you got the idea, keep in mind that `sudo make build` is the Makefile rule taht I used to test this code on my machine.
+During testing I often use the flag -fsanitize=address to compile the objects.   
 That is because sometimes is hard to catch certain type of memory leaks with other tools, so in other words,  
 the binary is compiled with the asan library adding quite an overhead to the program and the uniuser libray that you might want to use in your programs.  
 For your production envirorment you might want to get rid of the asan lib, the Makefile already has a rule for you  
 to build the user library and the utility program without this overhead, also if you are using other sharing library
-and they don't have asan lib you will get compiler error, so to solve all this you have to use this rule:  
+and they don't have asan lib you will get compiler errors, so to solve all this, you have to use this rule:  
 
 ```bash
 $ sudo make build_prod
 ```
-this will install the library on your machine, and the test program will be called `userctl` istead of test, and it will be installed  
+this will install the library on your machine, and the test program will be called `userctl` istead of test, and it will be installed 
 on your computer too, meaning you can run it from everywhere in your envirorment like `useradd`.  
 Both `uniuser.so` and `userctl` will be asan lib free.
  
