@@ -11,7 +11,7 @@ LIBDIR = /usr/local/lib
 INCLUDEDIR = /usr/local/include
 SHAREDLIBuser = lib$(LIBNAMEuser).so
 
-default:$(TARGETt)
+default:$(TARGETt) fileRule
 
 prod:$(TARGET)
 
@@ -93,8 +93,8 @@ install:
 	install -m 755 $(SHAREDLIBuser) $(LIBDIR)
 	ldconfig
 
-build:mv-config.h object-dir default library check-linker-path install
+build: fileRule mv-config.h object-dir default library check-linker-path install
 
-build_prod:mv-config.h object-dir prod libraryPR check-linker-path install
+build_prod: fileRule mv-config.h object-dir prod libraryPR check-linker-path install
 
 .PHONY: install object-dir default library check-linker-path mv-config.h 
