@@ -4,9 +4,15 @@
 /*Safe directory to keep data of deleted users*/
 #define USER_DEL_DIR "/home/users_del" 
 
+/*configuration file*/
+#define CONF "/etc/uniuser/uniuser.conf"
+#define rUID "/etc/uniuser/UIDs"
+#define rGID "/etc/uniuser/GIDs"
 
+#define REUSE 0
+#define REUSE_UID_GID 69
 
-/* files to open and to files acquire lock */
+/* files to open and  files acquire lock */
 #define SYS_PARAM "/etc/login.defs"
 #define GP "/etc/group"
 #define GP_LCK "/etc/group.lock"

@@ -71,7 +71,9 @@ static int extract_salt(char *pswd_hashed, char **salt);
 static int start_user_session(struct passwd *pw);
 static int get_full_name(char *username, char *full_name);
 static void clean(char *str, char item);
-
+static int get_conf();
+static int save_IDs(char *file_name, int ID);
+static int get_conf(int conf);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -235,12 +237,13 @@ int edit_user(char *username, int *uid, int element_to_change,...)
 	 * even if the root itself will try it
 	 * if you need to change the root password 
 	 * you will have to use the utilities provided from your 
-	 * Linux Distros;  
+	 * Linux Distro  
 	 * */
 	if(!username && !uid) return -1;
 	if(*uid == 0) return -1;
 	if(strncmp(username,ADMIN,strlen(ADMIN)) == 0) return -1;
 	if(element_to_change <= 0 ) return -1;
+
 
 	return 0;
 }
@@ -1114,7 +1117,7 @@ static int last_UID(char* file_name)
 		return EXIT_FAILURE;
 	}
 
-	int columns = 80;
+	int columns = 500;
 	char line[columns];
 	memset(line,0,columns);
 	int max = 0;
@@ -1608,7 +1611,7 @@ static int add_entry_to_group_file( char *file_name, char *group_name, char *use
 	char *tmp_file = "/etc/tmp.clean";
 	FILE *tmp = fopen(tmp_file,"w");
 	if(!tmp) {
-		fprintf(stderr,"can't open %s", file_name);
+		fprintf(stderr,"can't open %s.\n", tmp_file);
 		fclose(fp);
 		return -1;
 	}
@@ -2755,4 +2758,64 @@ static void clean(char *str, char item)
 			*str = '\0'; 	
 	}
 
+}
+
+static int get_conf(int conf)
+{
+	FILE *fp = fopen(CONF,"r");
+	if(!fp){
+		fprintf(stderr,"can't read %s.\n",CONF);
+		return -1;
+	}
+	
+	int column = 80;
+	char line[80];
+	memset(line,0,column);
+
+	while(fgets(line,column,fp)){
+		switch(conf){
+		case REUSE:
+		{
+			if(strstr(line,"REUSE") == NULL){
+				memset(line,0,column);
+				continue;
+			}
+
+			if(strncmp(line,"REUSE=yes",strlen(line))){
+				fclose(fp);
+				return REUSE_UID_GID;
+			}
+		}
+		break;
+		default:
+			break;
+		}
+				
+	}
+	
+	fclose(fp);
+	return -1;
+}
+
+static int save_IDs(char *file_name, int ID)
+{
+	FILE *fp = fopen(file_name,"wa");
+	if(!fp){
+		fprintf(stderr,"can't open file %s.\n",file_name);
+		return -1;
+	}
+	
+	size_t l = number_of_digit(ID)+1;
+	char num[l];
+	memset(num,0,l);
+
+	if(snprintf(num,l,"%d",ID) < 0){
+		fprintf(stderr,"snprintf() failed %s:%d.\n",__FILE__,__LINE__-1);
+		return -1;
+	}
+
+	fputs(num,fp);
+
+	fclose(fp);
+	return 0;
 }
