@@ -57,17 +57,48 @@ $ ./configure
 $ sudo make build
 ```
 
-This will compile the library and install it on your system, along with a test program called `user_manager`.
-Keep in mind that now you have a binary containing the asan library because the artifact has been compiled  
-with the flag -fsanitize=address. I use this to spots some memory leaks 
-that aren't that easy to spot with other tools.
+This will compile the library and install it on your system, along with a test program called `test`.
+the small routine will be located inside of uniuser direcotry `./test` will be a behave in a similar fashion as `useradd` does.   
+You can use it to test some of the library feature, for example, you can run 
 
-lib asan make the binary bigger, so if you need a smaller binary for production you can run:
+```bash
+$ sudo ./test -u User67 -p pass67
+```
+
+this will create an user called User67 with the password pass67, if you want to create a new group you
+simply run :
+
+```bash
+$ sudo ./test -g aNewGroup 
+```
+
+if you want to assign this group to an user, you can achive that by doing:
+
+```bash
+$ sudo ./test -eg aNewGroup -u User67
+```
+
+if you want to remove this user gorm the group:
+
+```bash
+$ sudo ./test -edg aNewGroup -u User67 
+```
+
+you got the idea, keep in mind that sudo make build is the Makefile rule taht i used to test my code on my machine  
+during testing I often use the flag -fsanitize=address to compile the objects.   
+That is because sometimes is hard to catch certain type of memory leaks with other tools, so in other words,  
+the binary is compiled with the asan library adding quite an overhead to the program and the uniuser libray that you might want to use in your programs.  
+For your production envirorment you might want to get rid of the asan lib, the Makefile already has a rule for you  
+to build the user library and the utility program without this overhead, also if you are using other sharing library
+and they don't have asan lib you will get compiler error, so to solve all this you have to use this rule:  
+
 ```bash
 $ sudo make build_prod
 ```
-this will install the library on your machine, and the test program will be called `user_manager_prod`, 
-both without lib asan.
+this will install the library on your machine, and the test program will be called `userctl` istead of test, and it will be installed  
+on your computer too, meaning you can run it from everywhere in your envirorment like `useradd`.  
+Both `uniuser.so` and `userctl` will be asan lib free.
+ 
   
 ## Using the Library in Your Code
 
@@ -80,7 +111,7 @@ int main(void) {
     char *username = "testuser";
     char *password = "securepassword";
 
-    if (add_user(username, password) < 1000) {
+    if (add_user(username, password,NULL) < 1000) {
         fprintf(stderr, "Error: Failed to add user '%s'\n", username);
         return 1;
     }
