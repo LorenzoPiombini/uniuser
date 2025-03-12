@@ -75,7 +75,6 @@ static void clean(char *str, char item);
 static int save_IDs(char *file_name, int ID);
 static int get_conf(int conf);
 static int get_reuse_ID(char *file_name);
-static int get_real_IDs(char *file_name);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
