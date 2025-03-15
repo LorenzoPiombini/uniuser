@@ -290,14 +290,41 @@ int add_user(char *username, char *paswd, char *full_name)
 		strncpy(param.ENCRYPT_METHOD,ENCRYPT_METHOD,strlen(ENCRYPT_METHOD)+1);
 	}
 
-	int uid = last_UID(PASSWD);
-	int gid = last_UID(GP);
+	int uid = 0;
+	int gid = 0;
+	if(get_conf(REUSE) == REUSE_UID_GID ){
+		gid = get_reuse_ID(rGID);
+		uid = get_reuse_ID(rUID);
+		if(gid <= 0 || uid <= 0){
+			status = -1;
+			goto clean_on_exit;
+		} 
+		if(gid == NO_IDs){
+			gid = last_UID(GP);
+			if(gid == GID_MAX) {
+				status = EMAX_G;
+				goto clean_on_exit;
+			}
+		} 
 
-	if(uid == param.UID_MAX || gid == param.GID_MAX) {
-		status = EMAX_U;
-		goto clean_on_exit;
+		if(uid == NO_IDs){
+			uid = last_UID(PASSWD);
+			if(uid == UID_MAX){
+				status = EMAX_U;
+				goto clean_on_exit;
+			}
+		}
+	} else {
+		uid = last_UID(PASSWD);
+		gid = last_UID(GP);
+
+		if(uid == param.UID_MAX || gid == param.GID_MAX) {
+			status = EMAX_U;
+			goto clean_on_exit;
+		}
 	}
-    	
+
+
 	/* compute SUB_UID and SUB_GID */
 	unsigned int sub_gid = gen_SUB_GID(uid,&param);
 	if(sub_gid == 0 || sub_gid == -1) {
@@ -622,6 +649,13 @@ int del_user(char *username, int mod)
 		return -1;
 	}
 
+	if( get_conf(REUSE) == REUSE_UID_GID){
+		if(save_IDs(rUID,pw->pw_uid) != 0){
+			fprintf(stderr,"can't save GID.\n");
+			return -1;
+		}	
+	}	
+
 
 	/*lock the files*/
 	if(lock_files() == -1) {
@@ -866,7 +900,7 @@ int create_group(char* group_name)
 		if(gid <= 0){
 			status = -1;
 			goto clean_on_exit;
-		} else if(gid == NO_GIDs){
+		} else if(gid == NO_IDs){
 			gid = last_UID(GP);
 			if(gid == GID_MAX) {
 				status = EMAX_G;
@@ -1192,12 +1226,12 @@ static int last_UID(char* file_name)
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 {
 	unsigned int sub_gid = 0;
-    if(uid == 999) {
-        sub_gid = 100000;    
-	    return sub_gid;
-    }
+	if(uid == 999) {
+	        sub_gid = 100000;    
+		return sub_gid;
+	}
 
-	int columns = 80;
+	int columns = 500;
 	char line[columns];
 	memset(line,0,columns);
 
@@ -1206,6 +1240,31 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 		printf("can't open %s.\n",SUB_GID);
 		return -1;
 	}
+
+	/*if the user has REUSE=yes we need to compute the SUB_UID differently*/
+	if(get_conf(REUSE) == REUSE_UID_GID){
+		int columns = 500;
+		char line[columns];
+		memset(line,0,columns);
+		while(fgets(line,columns,fp)){
+			strtok(line,":");
+			char* endptr;
+			sub_gid = (unsigned int) strtol(strtok(NULL,":"),&endptr,10);
+			if(*endptr != '\0') {
+				fprintf(stderr,"can't compute sub gid.\n");
+				return -1;
+			}
+		}
+
+		sub_gid += (*param).SUB_GID_COUNT;
+		if(sub_gid > (*param).SUB_GID_MAX)
+			sub_gid = ESGID;
+
+		fclose(fp);
+		return sub_gid;
+
+
+	} 
 
 	/* get the username based on the uid*/
 	struct passwd *pw = getpwuid(uid);
@@ -1251,15 +1310,42 @@ static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 		return EXIT_FAILURE;
 	}
 
+	/*if the user has REUSE=yes we need to compute the SUB_UID differently*/
+	if(get_conf(REUSE) == REUSE_UID_GID){
+		int columns = 500;
+		char line[columns];
+		memset(line,0,columns);
+		while(fgets(line,columns,fp)){
+			strtok(line,":");
+			char* endptr;
+			sub_uid = (unsigned int) strtol(strtok(NULL,":"),&endptr,10);
+			if(*endptr != '\0') {
+				fprintf(stderr,"can't compute sub uid.\n");
+				return -1;
+			}
+		}
 
-	/* get the username based on the uid*/
-	struct passwd *pw = getpwuid(uid);
+		sub_uid += (*param).SUB_UID_COUNT;
+		if(sub_uid > (*param).SUB_UID_MAX)
+			sub_uid = ESUID;
+
+		fclose(fp);
+		return sub_uid;
+
+
+	} 
+
+	/* get the username based on the uid
+	 * AKA normal way*/
+	struct passwd *pw = NULL;
+	pw = getpwuid(uid);
 	if(!pw) {
 		fprintf(stderr,"user not found.\n");
 		return EXIT_FAILURE;
 	}		
 
-	int columns = 80;
+
+	int columns = 500;
 	char line[columns];
 	memset(line,0,columns);
 
@@ -2820,7 +2906,7 @@ static int get_conf(int conf)
 				return REUSE_UID_GID;
 			}
 		}
-		break;
+			break;
 		default:
 			break;
 		}
@@ -2860,7 +2946,7 @@ static int get_reuse_ID(char *file_name)
 	FILE *fp = fopen(file_name,"r");
 	if(!fp){
 		fprintf(stderr,"can't open %s.\n",file_name);
-		return -1;
+		return NO_IDs;
 	}
 
 	FILE *tmp = fopen(TEMP_CNFL,"w");
@@ -2908,7 +2994,7 @@ static int get_reuse_ID(char *file_name)
 	if(found)
 		return id; /* success*/ 
 	else 
-		return NO_GIDs;
+		return NO_IDs;
 	
 }
 

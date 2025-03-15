@@ -72,7 +72,7 @@
 #define ENONE_GU 18 /*the user is not assign to this group */
 #define EALRDY_G 19 /*group already exist*/
 #define ENONE_G 20 /*the group  does not exist*/
-#define NO_GIDs 21 /*no reusalble GIds*/
+#define NO_IDs 21 /*no reusalble GIds*/
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/
