@@ -253,7 +253,6 @@ int edit_user(char *username, int *uid, int element_to_change,...)
 int add_user(char *username, char *paswd, char *full_name)
 {
 	if(user_already_exist(username)) {
-		printf("user already exist.\n");
 		return EALRDY_U;	
 	}
 
