@@ -638,6 +638,9 @@ int del_user(char *username, int mod)
                 return -1;    
         }
         
+	if (pw->pw_uid == 0){
+		return EROOT;
+	}
 	/* 
 	* changing to root user, if the program is not run by root 
 	* or with root privilegies the function will fail

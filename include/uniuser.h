@@ -73,6 +73,7 @@
 #define EALRDY_G 19 /*group already exist*/
 #define ENONE_G 20 /*the group  does not exist*/
 #define NO_IDs 21 /*no reusalble GIds*/
+#define EROOT 22 /*try to change or delete ROOT*/
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/
