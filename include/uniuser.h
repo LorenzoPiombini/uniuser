@@ -130,18 +130,22 @@ struct user_info{
 };
 
 /*MASK value operation */
-#define EDIT_GROUP_USER 16	/*0001 0000*/
-#define USER 32			/*0010 0000*/
-#define DEL_F 64		/*0100 0000*/
-#define DEL 128			/*1000 0000*/
-#define GROUP 10		/*0000 1010*/
-#define PWD 11			/*0000 1011*/
-#define USER_AND_PSWD 43	/*0010 1011*/
-#define ADD_GROUP_TO_USER 58    /*0010 1010*/
-#define DEL_GROUP 138		/*1000 1010*/
-#define DEL_USER 160		/*1010 0000 */
-#define DEL_USER_AND_GROUP 172	/*1010 1010*/
-#define DEL_GROUP_FROM_USER 186	/*1011 1010*/
+#define USER 32		/*0010 0000*/
+#define DEL_F 64	/*0100 0000*/
+#define DEL 128		/*1000 0000*/
+#define GROUP 10	/*0000 1010*/
+#define PWD 11		/*0000 1011*/
+#define EDIT 16		/*0001 0000*/
+
+/*operation*/
+#define DEL_USER 160		/*1010 0000 */ /* flag -du <username>*/
+#define ADD_GROUP_TO_USER 58    /*0010 1010*/ /* flag -g <groupname> -u <username>*/
+#define DEL_GROUP 138		/*1000 1010*/ /* flag -dg <groupname> */
+#define USER_AND_PSWD 43	/*0010 1011*/ /* falg -u <username> -p <password>*/
+#define DEL_GROUP_FROM_USER 186	/*1011 1010*/ /*flag -ed -u <username> -g <groupname>*/
+#define EDIT_PASWD 59		/*0011 1011*/ 
+
+#define CH_PWD EDIT_PASWD
 
 /* the API available with this library*/
 int crypt_pswd(char *paswd, char **hash, char* salt);

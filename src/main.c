@@ -9,8 +9,7 @@ int main(int argc, char** argv)
 {
 	char Prog[] = "userctl";
 	if(argc < 2) {
-		fprintf(stderr,"Usage: ./%s [username] \n\
-				Usage: ./%s -OPTIONS\n",Prog,Prog);
+		fprintf(stderr,"Usage: ./%s [username] \nUsage: ./%s -OPTIONS\n",Prog,Prog);
 		return -1;
 	}
 
@@ -45,7 +44,7 @@ int main(int argc, char** argv)
 			strncpy(password,optarg,strlen(optarg)+1);	
 			break;
 	        case 'e':
-			operation = operation | EDIT_GROUP_USER;
+			operation = operation | EDIT;
 			break;	
 		default:
 			break;
@@ -85,6 +84,9 @@ int main(int argc, char** argv)
 		switch(ret){
 		case ENONE_U: 
 			fprintf(stderr,"(%s): user '%s' does not exist.\n",Prog,username);
+			break;
+		case EROOT: 
+			fprintf(stderr,"(%s): user '%s' can't be deleted or changed.\n",Prog,username);
 			break;
 		case -1:
 			fprintf(stdout,"(%s): can't delete user '%s'.\n",Prog,username);
@@ -181,7 +183,18 @@ int main(int argc, char** argv)
 			fprintf(stderr,"(%s): can't remove user '%s' from group '%s'.\n",Prog,username,group_name);
 			break;
 		default:
-			fprintf(stderr,"(%s): user '%s' removed from group '%s'.\n",Prog,username,group_name);
+			fprintf(stdout,"(%s): user '%s' removed from group '%s'.\n",Prog,username,group_name);
+			break;
+		}
+		break;
+	case EDIT_PASWD:
+		ret = edit_user(username,NULL,operation,1,password);
+		switch(ret){
+		case -1:
+			fprintf(stdout,"(%s): can't change password fpr user '%s'.\n",Prog,username);
+			break;
+		default:
+			fprintf(stdout,"(%s): pasword changed for user '%s'.\n",Prog,username);
 			break;
 		}
 		break;

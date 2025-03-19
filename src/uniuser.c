@@ -75,6 +75,7 @@ static void clean(char *str, char item);
 static int save_IDs(char *file_name, int ID);
 static int get_conf(int conf);
 static int get_reuse_ID(char *file_name);
+static int edit_shdow_file(char *username, char *hash);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -231,7 +232,7 @@ static int get_save_pswd(char *username, char **svd_pswd)
  *	- user ID
  *	- element_to_change
  * */
-int edit_user(char *username, int *uid, int element_to_change,...)
+int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 {
 	/* 
 	 * an attempt to edit root user will fail
@@ -241,10 +242,58 @@ int edit_user(char *username, int *uid, int element_to_change,...)
 	 * Linux Distro  
 	 * */
 	if(!username && !uid) return -1;
-	if(*uid == 0) return -1;
-	if(strncmp(username,ADMIN,strlen(ADMIN)) == 0) return -1;
-	if(element_to_change <= 0 ) return -1;
+	if(uid)
+		if(*uid == 0) return -1;
 
+	if(strncmp(username,ADMIN,strlen(ADMIN)) == 0) return -1;
+	if(n_elem <= 0 ) return -1;
+
+	va_list args;
+	va_start(args,n_elem);
+
+	switch(element_to_change){
+	case CH_PWD:
+	{
+		if (n_elem > 1) return -1;
+
+		/*change password*/
+		char *pswd = va_arg(args, char*);
+		if(pswd){
+			char *hash = NULL;
+			if(crypt_pswd(pswd,&hash,NULL) == -1) {
+				fprintf(stderr, "paswd encryption failed. %s:%d.\n",
+					__FILE__,__LINE__-1);
+				return -1;
+			}
+			
+			/*lock files */
+			if((lock_file(SHADOW_LCK) == -1)) {
+				fprintf(stderr,"can't lock the file.\n");
+				free(hash);
+				return -1;
+			}
+
+			
+			/* write the new passwd to file  */		
+			if(edit_shdow_file(username,hash)){
+				printf("edit shadows files failed.\n");
+				free(hash);
+				return -1;
+			}
+
+			free(hash);
+
+			if(unlock_file(SHADOW_LCK) == -1){
+				fprintf(stderr,"can't unlock the file.\n");
+				return -1;
+			}	
+	
+		}		
+		break;	
+	}
+	default:
+		break;
+	}
 
 	return 0;
 }
@@ -3000,3 +3049,83 @@ static int get_reuse_ID(char *file_name)
 	
 }
 
+static int edit_shdow_file(char *username, char *hash)
+{
+	FILE *fp = fopen(SHADOW, "a+");
+	if(!fp){
+		fprintf(stderr,"can't open '%s' file.\n",SHADOW);
+		return -1;
+	}
+
+	char *temp = "/etc/temp.shd";
+	FILE *tmp = fopen("/etc/temp.shd","w");
+	if(!tmp){
+		fprintf(stderr,"can't open '%s' file.\n",temp);
+		fclose(fp);
+		return -1;
+	}
+
+	rewind(fp);
+	int columns =  3064;
+	char line[columns];
+	memset(line,0,columns);
+	while(fgets(line,columns,fp)){
+		if(strstr(line,username) != NULL){
+			size_t l = strlen(line) + 1;
+			char cpy_line[l];
+			memset(cpy_line,0,l);
+			strncpy(cpy_line,line,l);
+			char *t = strtok(cpy_line, ":");
+			if(!t){
+				fprintf(stderr,"strtok() failed, %s:%d",__FILE__,__LINE__-2);
+				fclose(fp);
+				return -1;
+			}
+			
+			if(strncmp(t,username,strlen(username)) != 0){
+				fputs(line,tmp);
+				memset(line,0,l);
+				continue;
+			}
+				
+			int pos = 0;
+			for(int counter = 0, i = 0 ; counter < 2; i++){
+				if (line[i] == ':'){
+					pos = i;
+					counter++;
+				}
+			}
+
+			
+			char new_line[columns];
+			memset(new_line,0,columns);
+			size_t size = strlen(username)+ strlen(hash) + strlen(&line[pos])+2;
+			if(snprintf(new_line,size,"%s:%s%s",username,hash,&line[pos]) < 0){
+				fprintf(stderr,"snprintf() failed, %s:%d.",__FILE__,__LINE__-1);
+				fclose(fp);
+				return -1;
+			}
+			fputs(new_line,tmp);
+			memset(line,0,columns);
+			continue;
+		}
+	
+		fputs(line,tmp);
+		memset(line,0,columns);
+	}
+	
+	fclose(tmp);
+	fclose(fp);
+
+	if(remove(SHADOW) != 0) {
+		fprintf(stderr,"can't delete %s", SHADOW);
+		return -1;
+	}
+
+	if(rename(temp,SHADOW) != 0) {
+		fprintf(stderr,"can't rename %s", temp);
+		return -1;
+	}
+	
+	return 0;
+}
