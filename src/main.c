@@ -212,6 +212,9 @@ int main(int argc, char** argv)
 		case EGECOS:
 			fprintf(stdout,"(%s): can't change gecos for user '%s'.\n",Prog,username);
 			break;
+		case ENONE_U:
+			fprintf(stderr,"(%s): user '%s' does not exist.\n",Prog, username);
+			break;
 		default:
 			fprintf(stdout,"(%s): gecos changed for user '%s'.\n",Prog,username);
 			break;

@@ -140,6 +140,7 @@ struct user_info{
 #define EDIT 16		/*0001 0000*/
 
 /*operation*/
+/*DO NOT USE 63*/
 #define DEL_USER 160		/*1010 0000 */ /* flag -du <username>*/
 #define ADD_GROUP_TO_USER 58    /*0010 1010*/  /* flag -g <groupname> -u <username>*/
 #define DEL_GROUP 138		/*1000 1010*/  /* flag -dg <groupname> */
@@ -152,6 +153,7 @@ struct user_info{
 #define CH_PWD EDIT_PASWD
 #define CH_GECOS EDIT_GECOS
 #define CH_USRNAME EDIT_USER 
+
 
 /* the API available with this library*/
 int crypt_pswd(char *paswd, char **hash, char* salt);

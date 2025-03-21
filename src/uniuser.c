@@ -227,7 +227,7 @@ static int get_save_pswd(char *username, char **svd_pswd)
 
 }
 
-/*TODO: implement the edit_user functions
+/*
  * the function must have two of these three parameters:
  *	- username
  *	- user ID
@@ -263,6 +263,8 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	switch(element_to_change){
 	case CH_PWD:
 	{
+		if(!user_already_exist(username)) return ENONE_U;
+
 		if (n_elem > 1) return -1;
 
 		/*change password*/
@@ -296,13 +298,13 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 				fprintf(stderr,"can't unlock the file.\n");
 				return -1;
 			}	
-	
 		}		
 		break;	
 	}
 	case CH_GECOS:
 	{
-		
+		if(!user_already_exist(username)) return ENONE_U;
+
 		char *changes = va_arg(args,char*);
 		/*lock files */
 		if((lock_file(PASSWD_LCK) == -1)) {
@@ -324,6 +326,66 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	case CH_USRNAME:
 	{
 		break;
+	}
+	case (CH_GECOS | CH_PWD):
+	{
+		if(!user_already_exist(username)) return ENONE_U;
+
+		if (n_elem < 2 || n_elem > 2) return -1;
+
+		/*change password*/
+		char *pswd = va_arg(args, char*);
+		if(pswd){
+			char *hash = NULL;
+			if(crypt_pswd(pswd,&hash,NULL) == -1) {
+				fprintf(stderr, "paswd encryption failed. %s:%d.\n",
+					__FILE__,__LINE__-1);
+				return -1;
+			}
+			
+			/*lock files */
+			if((lock_file(SHADOW_LCK) == -1)) {
+				fprintf(stderr,"can't lock the file.\n");
+				free(hash);
+				return -1;
+			}
+
+			
+			/* write the new passwd to file  */		
+			if(edit_shdow_file(username,hash)){
+				printf("edit shadows files failed.\n");
+				free(hash);
+				return -1;
+			}
+
+			free(hash);
+
+			if(unlock_file(SHADOW_LCK) == -1){
+				fprintf(stderr,"can't unlock the file.\n");
+				return -1;
+			}	
+		}		
+
+
+		char *changes = va_arg(args,char*);
+		/*lock files */
+		if((lock_file(PASSWD_LCK) == -1)) {
+			fprintf(stderr,"can't lock the file.\n");
+			return -1;
+		}
+
+
+		if(edit_passwd_file(username,changes,CH_GECOS) == -1)
+			return EGECOS;	
+		
+
+		if(unlock_file(PASSWD_LCK) == -1){
+			fprintf(stderr,"can't unlock the file.\n");
+				return -1;
+		}
+
+		break;
+
 	}
 	default:
 		break;
