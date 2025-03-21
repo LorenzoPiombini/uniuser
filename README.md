@@ -19,10 +19,11 @@ allowing you to create users securely without relying on shell exposure or risky
 ## API endpoint
 
 ```c
-int crypt_pswd(char *paswd, char **hash,char *salt);
+int crypt_pswd(char *paswd, char **hash, char* salt);
 int add_user(char *username, char *paswd, char *full_name);
+int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...);
 int login(char *username, char *passwd, int mod);
-int get_user_info(char *username, struct user_info *ui); 
+int get_user_info(char *username, struct user_info *ui);
 int del_user(char *username, int mod);
 int create_group(char* group_name);
 int del_group(char *group_name);
@@ -35,7 +36,7 @@ int list_group(char *username, char **list);
 - A Linux-based operating system.
 - Root privileges (`sudo`) for building and testing.
 - GCC and standard C development tools (`make`, `git`, etc.).
-- libCrypt
+- lcrypt
 
 ## Getting Started
 
@@ -125,21 +126,25 @@ int main(void) {
 
 These are the errors that endpoints can return:
 ```plain text
-EMAX_G      /*exeed the maximum gid number*/ 
-EMAX_U      /*exeed the maximum user number*/
-EALRDY_U    /*user already exist*/
-ESGID       /*SUB_GID_MAX overflowed */
-ESUID       /*SUB_UID_MAX overflowed */
-ECHAR       /* passowrd contain KILL or ERASE system char */
-ENONE_U     /* user does not exist */
-EALRDY_GU   /*group already added to user*/
-ERR_GU      /*error in delating the group*/
-ENONE_GU    /*the user is not assign to this group */
-EALRDY_G    /*group already exist*/
-ENONE_G     /*the group  does not exist*/
+#define EMAX_G 9        /*exeed the maximum gid number*/
+#define EMAX_U 10       /*exeed the maximum user number*/
+#define EALRDY_U 11     /*user already exist*/
+#define ESGID 12        /*SUB_GID_MAX overflowed */
+#define ESUID 13        /*SUB_UID_MAX overflowed */
+#define ECHAR 14        /* passowrd contain KILL or ERASE system char */
+#define ENONE_U 15      /* user does not exist */
+#define EALRDY_GU 16    /*group already added to user*/
+#define ERR_GU 17       /*error in delating the group*/
+#define ENONE_GU 18     /*the user is not assign to this group */
+#define EALRDY_G 19     /*group already exist*/
+#define ENONE_G 20      /*the group  does not exist*/
+#define NO_IDs 21       /*no reusalble GIds*/
+#define EROOT 22        /*try to change or delete ROOT*/
+#define EGECOS 23       /*edit user  GECOS faield*/
+
 ```
 
-all the fucntions could return a generic error -1,and a message will be display to the console.
+all the fucntions might return a generic error -1,and a message will be display to the console.
 
 `add_user()` returns a value ≥ 1000 on success (UID).
 values < 1000 indicate an error wich will be one of the follwing:
@@ -152,6 +157,7 @@ values < 1000 indicate an error wich will be one of the follwing:
 `del_user` returns 0 on success.
 erros :
 - `ENONE_U`
+- `EROOT`
 
 `del_group()` returns 0 on success.
 erros :
