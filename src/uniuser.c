@@ -76,6 +76,7 @@ static int save_IDs(char *file_name, int ID);
 static int get_conf(int conf);
 static int get_reuse_ID(char *file_name);
 static int edit_shdow_file(char *username, char *hash);
+static int edit_passwd_file(char *username, char *changes, int field);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -250,6 +251,12 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	
 	if(n_elem <= 0 ) return -1;
 
+	if(setuid(0) == -1) {
+		fprintf(stderr,"permission denied.\n");
+		return -1;
+	}
+
+
 	va_list args;
 	va_start(args,n_elem);
 
@@ -295,7 +302,23 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	}
 	case CH_GECOS:
 	{
+		
+		char *changes = va_arg(args,char*);
+		/*lock files */
+		if((lock_file(PASSWD_LCK) == -1)) {
+			fprintf(stderr,"can't lock the file.\n");
+			return -1;
+		}
 
+
+		if(edit_passwd_file(username,changes,CH_GECOS) == -1)
+			return EGECOS;	
+		
+
+		if(unlock_file(PASSWD_LCK) == -1){
+			fprintf(stderr,"can't unlock the file.\n");
+				return -1;
+		}	
 		break;
 	}
 	case CH_USRNAME:
@@ -3182,7 +3205,7 @@ static int edit_passwd_file(char *username, char *changes, int field)
 		
 		char *t = strtok(cpy_line,":");
 		if(!t){
-			fprintf(stderr,"strtok() failed, %s:%d.\n"__FILE__,__LINE__-2);
+			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
 			fclose(fp);
 			fclose(tmp);
 			if(remove(temp) != 0) 
@@ -3206,8 +3229,12 @@ static int edit_passwd_file(char *username, char *changes, int field)
 		case CH_GECOS:
 		{
 			int pos = 0;
+			int bef_last = 0;
 			for(int i = 0, counter = 0; counter < 5;i++){
 				if(line[i] == ':'){
+					if(counter == 3)
+						bef_last = i;
+
 					counter++;
 					pos = i;
 				}
@@ -3215,15 +3242,44 @@ static int edit_passwd_file(char *username, char *changes, int field)
 
 			if(line[pos - 1] == ':'){
 				size_t last_l = strlen(&line[pos])+1;
-				char last_str[lasl_l];
-				memset(last_str,0,lasl_l);
-				strncpy(last_str,&line[pos],lasl_l);
+				char last_str[last_l];
+				memset(last_str,0,last_l);
+				strncpy(last_str,&line[pos],last_l);
+
 				line[pos] = '\0';
 				size_t beg_len = strlen(line)+1;
 				char beg_str[beg_len];
 				memset(beg_str,0,beg_len);
 				strncpy(beg_str,line,beg_len);
-				size_t all_l = strlen(changes) + (beg_len - 1) + (lasl_l - 1) + 1; 
+				
+				size_t all_l = strlen(changes) + (beg_len - 1) + (last_l - 1) + 1; 
+				char new_line[all_l];
+				memset(new_line, 0,all_l);
+				if(snprintf(new_line,all_l,"%s%s%s",beg_str,changes,last_str) < 0) {
+					fprintf(stderr,"snprintf() failed, %s:%d.\n",__FILE__,__LINE__-1);	
+					fclose(fp);
+					fclose(tmp);
+					if(remove(temp) != 0) 
+						fprintf(stderr,"can't delete '%s'\n", temp);
+					return -1;
+				}
+				
+				fputs(new_line,tmp);
+				memset(line,0,columns);
+				break;
+			} else {
+				size_t last_l = strlen(&line[pos])+1;
+				char last_str[last_l];
+				memset(last_str,0,last_l);
+				strncpy(last_str,&line[pos],last_l);
+
+				line[bef_last + 1] = '\0';
+				size_t beg_len = strlen(line)+1;
+				char beg_str[beg_len];
+				memset(beg_str,0,beg_len);
+				strncpy(beg_str,line,beg_len);
+				
+				size_t all_l = strlen(changes) + (beg_len - 1) + (last_l - 1) + 1; 
 				char new_line[all_l];
 				memset(new_line, 0,all_l);
 				if(snprintf(new_line,all_l,"%s%s%s",beg_str,changes,last_str) < 0) {
@@ -3244,9 +3300,21 @@ static int edit_passwd_file(char *username, char *changes, int field)
 		default:
 			break;
 		}
-
-
-
 	}
+
+	fclose(tmp);
+	fclose(fp);
+
+	if(remove(PASSWD) != 0) {
+		fprintf(stderr,"can't delete %s", PASSWD);
+		return -1;
+	}
+
+	if(rename(temp,PASSWD) != 0) {
+		fprintf(stderr,"can't rename %s", temp);
+		return -1;
+	}
+
+	return 0;
 
 }

@@ -74,6 +74,7 @@
 #define ENONE_G 20 /*the group  does not exist*/
 #define NO_IDs 21 /*no reusalble GIds*/
 #define EROOT 22 /*try to change or delete ROOT*/
+#define EGECOS 23 /*edit user  GECOS faield*/
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/
@@ -145,14 +146,17 @@ struct user_info{
 #define USER_AND_PSWD 43	/*0010 1011*/  /* falg -u <username> -p <password>*/
 #define DEL_GROUP_FROM_USER 186	/*1011 1010*/  /*flag -ed -u <username> -g <groupname>*/
 #define EDIT_PASWD 59		/*0011 1011*/ /*flag -eu <username> -p <password> */
-#define EDIT_GECOS 42		/*0011 0100*/ 
+#define EDIT_GECOS 52		/*0011 0100*/ /*flag -eu <username> -G <gecos>*/
+#define EDIT_USER  48           /*0011 0000*/ /*flag -eu <username> -c <newusername>*/
 
 #define CH_PWD EDIT_PASWD
 #define CH_GECOS EDIT_GECOS
+#define CH_USRNAME EDIT_USER 
 
 /* the API available with this library*/
 int crypt_pswd(char *paswd, char **hash, char* salt);
 int add_user(char *username, char *paswd, char *full_name);
+int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...);
 int login(char *username, char *passwd, int mod);
 int get_user_info(char *username, struct user_info *ui);
 int del_user(char *username, int mod);

@@ -16,17 +16,12 @@ int main(int argc, char** argv)
 	int ret = 0;
 	int opt = 0;
 	unsigned char operation = 0;
-	char username[MAX_LENGTH];
-	char password[MAX_LENGTH];
-	char full_name[MAX_LENGTH];
-	char group_name[MAX_LENGTH];
-	memset(username,0,MAX_LENGTH);
-	memset(password,0,MAX_LENGTH);
-	memset(full_name,0,MAX_LENGTH);
-	memset(group_name,0,MAX_LENGTH);
-
+	char username[MAX_LENGTH] = {0};
+	char password[MAX_LENGTH] = {0};
+	char group_name[MAX_LENGTH]= {0};
+	char changes[MAX_LENGTH] = {0};
 	
-	while((opt = getopt(argc,argv,"u:dg:p:e")) != -1){
+	while((opt = getopt(argc,argv,"u:dg:p:eG:c:")) != -1){
 		switch(opt){
 		case 'u':
 			operation = operation | USER;
@@ -45,7 +40,14 @@ int main(int argc, char** argv)
 			break;
 	        case 'e':
 			operation = operation | EDIT;
-			break;	
+			break;
+		case 'G':
+			operation = operation | GECOS;
+			strncpy(changes,optarg,strlen(optarg)+1);
+			break;
+		case 'c':
+			strncpy(changes,optarg,strlen(optarg)+1);
+			break;
 		default:
 			break;
 		}	
@@ -198,6 +200,24 @@ int main(int argc, char** argv)
 			break;
 		}
 		break;
+	case EDIT_GECOS:
+		if(changes[0] == '\0'){
+			fprintf(stderr,"(%s): gecos parameter missing.\n",Prog);
+			break;
+		}
+
+		ret = edit_user(username,NULL,operation,1,changes);
+		switch(ret){
+		case -1:
+		case EGECOS:
+			fprintf(stdout,"(%s): can't change gecos for user '%s'.\n",Prog,username);
+			break;
+		default:
+			fprintf(stdout,"(%s): gecos changed for user '%s'.\n",Prog,username);
+			break;
+		}
+		break;
+
 	default:
 		fprintf(stderr,"(%s): invalid options or operation not allowed.\n",Prog);
 		return -1;
