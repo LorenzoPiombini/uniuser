@@ -31,6 +31,7 @@ int edit_group_user(char *username, char *group_name, int mod);
 int paswd_chk(char *passwrd,int rules);
 int list_group(char *username, char **list);
 ```
+---
 
 ## Prerequisites
 - A Linux-based operating system.
@@ -121,7 +122,7 @@ int main(void) {
     return 0;
 }
 ```
-
+---
 ## Return Values
 
 These are the errors that endpoints can return:
