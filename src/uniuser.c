@@ -230,7 +230,7 @@ static int get_save_pswd(char *username, char **svd_pswd)
  * the function must have two of these three parameters:
  *	- username
  *	- user ID
- *	- element_to_change
+ *	- n_elem
  * */
 int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 {
@@ -245,7 +245,9 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	if(uid)
 		if(*uid == 0) return -1;
 
-	if(strncmp(username,ADMIN,strlen(ADMIN)) == 0) return -1;
+	if(username)
+		if(strncmp(username,ADMIN,strlen(ADMIN)) == 0) return -1;
+	
 	if(n_elem <= 0 ) return -1;
 
 	va_list args;
@@ -290,6 +292,15 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	
 		}		
 		break;	
+	}
+	case CH_GECOS:
+	{
+
+		break;
+	}
+	case CH_USRNAME:
+	{
+		break;
 	}
 	default:
 		break;
@@ -3079,6 +3090,9 @@ static int edit_shdow_file(char *username, char *hash)
 			if(!t){
 				fprintf(stderr,"strtok() failed, %s:%d",__FILE__,__LINE__-2);
 				fclose(fp);
+				fclose(tmp);
+				if(remove(temp) != 0) 
+					fprintf(stderr,"can't delete '%s'\n", temp);
 				return -1;
 			}
 			
@@ -3103,6 +3117,9 @@ static int edit_shdow_file(char *username, char *hash)
 			if(snprintf(new_line,size,"%s:%s%s",username,hash,&line[pos]) < 0){
 				fprintf(stderr,"snprintf() failed, %s:%d.",__FILE__,__LINE__-1);
 				fclose(fp);
+				fclose(tmp);
+				if(remove(temp) != 0) 
+					fprintf(stderr,"can't delete '%s'\n", temp);
 				return -1;
 			}
 			fputs(new_line,tmp);
@@ -3128,4 +3145,108 @@ static int edit_shdow_file(char *username, char *hash)
 	}
 	
 	return 0;
+}
+
+
+static int edit_passwd_file(char *username, char *changes, int field)
+{
+	FILE *fp = fopen(PASSWD,"a+");
+	if(!fp){
+		fprintf(stderr,"can't open '%s'.\n",PASSWD);
+		return -1;
+	}
+	
+	char *temp = "/etc/temp.pswd";
+	FILE *tmp = fopen(temp,"w");
+	if(!tmp){
+		fprintf(stderr,"can't open '%s'.\n",temp);
+		fclose(fp);
+		return -1;
+	}
+
+	int columns = 3048;
+	char line[columns];
+	memset(line,0,columns);
+	
+	while(fgets(line,columns,fp)){
+		if(strstr(line,username) == NULL){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;
+		}
+
+		size_t l = strlen(line)+1;
+		char cpy_line[l];
+		memset(cpy_line,0,l);
+		strncpy(cpy_line,line,l);
+		
+		char *t = strtok(cpy_line,":");
+		if(!t){
+			fprintf(stderr,"strtok() failed, %s:%d.\n"__FILE__,__LINE__-2);
+			fclose(fp);
+			fclose(tmp);
+			if(remove(temp) != 0) 
+				fprintf(stderr,"can't delete '%s'\n", temp);
+			return -1;
+		}
+
+		if(strncmp(t,username,strlen(username)+1) != 0){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;	
+		}
+
+
+		switch(field){
+		case CH_USRNAME:
+		{
+			
+			break;
+		}
+		case CH_GECOS:
+		{
+			int pos = 0;
+			for(int i = 0, counter = 0; counter < 5;i++){
+				if(line[i] == ':'){
+					counter++;
+					pos = i;
+				}
+			}
+
+			if(line[pos - 1] == ':'){
+				size_t last_l = strlen(&line[pos])+1;
+				char last_str[lasl_l];
+				memset(last_str,0,lasl_l);
+				strncpy(last_str,&line[pos],lasl_l);
+				line[pos] = '\0';
+				size_t beg_len = strlen(line)+1;
+				char beg_str[beg_len];
+				memset(beg_str,0,beg_len);
+				strncpy(beg_str,line,beg_len);
+				size_t all_l = strlen(changes) + (beg_len - 1) + (lasl_l - 1) + 1; 
+				char new_line[all_l];
+				memset(new_line, 0,all_l);
+				if(snprintf(new_line,all_l,"%s%s%s",beg_str,changes,last_str) < 0) {
+					fprintf(stderr,"snprintf() failed, %s:%d.\n",__FILE__,__LINE__-1);	
+					fclose(fp);
+					fclose(tmp);
+					if(remove(temp) != 0) 
+						fprintf(stderr,"can't delete '%s'\n", temp);
+					return -1;
+				}
+				
+				fputs(new_line,tmp);
+				memset(line,0,columns);
+				break;
+			}
+			break;
+		}
+		default:
+			break;
+		}
+
+
+
+	}
+
 }
