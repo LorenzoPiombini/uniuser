@@ -135,17 +135,20 @@ struct user_info{
 #define DEL 128		/*1000 0000*/
 #define GROUP 10	/*0000 1010*/
 #define PWD 11		/*0000 1011*/
+#define GECOS 4		/*0000 0100*/
 #define EDIT 16		/*0001 0000*/
 
 /*operation*/
 #define DEL_USER 160		/*1010 0000 */ /* flag -du <username>*/
-#define ADD_GROUP_TO_USER 58    /*0010 1010*/ /* flag -g <groupname> -u <username>*/
-#define DEL_GROUP 138		/*1000 1010*/ /* flag -dg <groupname> */
-#define USER_AND_PSWD 43	/*0010 1011*/ /* falg -u <username> -p <password>*/
-#define DEL_GROUP_FROM_USER 186	/*1011 1010*/ /*flag -ed -u <username> -g <groupname>*/
-#define EDIT_PASWD 59		/*0011 1011*/ 
+#define ADD_GROUP_TO_USER 58    /*0010 1010*/  /* flag -g <groupname> -u <username>*/
+#define DEL_GROUP 138		/*1000 1010*/  /* flag -dg <groupname> */
+#define USER_AND_PSWD 43	/*0010 1011*/  /* falg -u <username> -p <password>*/
+#define DEL_GROUP_FROM_USER 186	/*1011 1010*/  /*flag -ed -u <username> -g <groupname>*/
+#define EDIT_PASWD 59		/*0011 1011*/ /*flag -eu <username> -p <password> */
+#define EDIT_GECOS 42		/*0011 0100*/ 
 
 #define CH_PWD EDIT_PASWD
+#define CH_GECOS EDIT_GECOS
 
 /* the API available with this library*/
 int crypt_pswd(char *paswd, char **hash, char* salt);
