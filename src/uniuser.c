@@ -331,6 +331,7 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	}
 	case CH_USRNAME:
 	{
+#if 0
 		if(!user_already_exist(username)) return ENONE_U;
 
 		if (n_elem > 1) return -1;
@@ -361,6 +362,7 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 		}
 
 		break;
+#endif
 	}
 	case (CH_GECOS | CH_PWD):
 	{
@@ -3358,6 +3360,7 @@ static int edit_passwd_file(char *username, char *changes, int field)
 		switch(field){
 		case CH_USRNAME:
 		{
+#if 0
 			size_t second_str_l = strlen(cpy_line);
 			char second_str[second_str_l];
 			memset(second_str,0,second_str_l);
@@ -3378,6 +3381,7 @@ static int edit_passwd_file(char *username, char *changes, int field)
 			fputs(new_line,tmp);
 			memset(line,0,columns);
 			break;
+#endif		
 		}
 		case CH_GECOS:
 		{
