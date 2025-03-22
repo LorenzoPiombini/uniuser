@@ -77,6 +77,10 @@ static int get_conf(int conf);
 static int get_reuse_ID(char *file_name);
 static int edit_shdow_file(char *username, char *hash, int operation, char *changes);
 static int edit_passwd_file(char *username, char *changes, int field);
+static int edit_subuid_file(char *username, char *changes);
+static int edit_subgid_file(char *username, char *changes);
+static int edit_gshadow_file(char *username, char *changes);
+static int edit_group_file(char *groupname, char *changes);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -334,26 +338,24 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 		char *changes = va_arg(args, char*);
 		if(changes){
 			/*lock files */
-			if((lock_file(PASSWD_LCK) == -1) || 
-					lock_file(SHADOW_LCK) == -1) {
+			if(lock_files() == -1) { 
 				fprintf(stderr,"can't lock the file.\n");
 				return -1;
 			}
 
 
-			if(edit_passwd_file(username,changes,CH_USRNAME) == -1)
+			if(edit_passwd_file(username,changes,CH_USRNAME) == -1 ||
+				edit_shdow_file(username,NULL,CH_USRNAME, changes) == -1)
+				edit_subuid_file(username,changes) == -1 ||
+				edit_subgid_file(username,changes) == -1 ||
+				edit_gshadow_file(username,changes) == -1 ||
+				edit_group_file(username,changes) == -1 {
 				return EUSRNAME;
-
-			/* write the new username to shadow file  */		
-			if(edit_shdow_file(username,NULL,CH_USRNAME, changes)){
-				printf("edit shadows files failed.\n");
-				return -1;
 			}
 
 
-			if(unlock_file(PASSWD_LCK) == -1 ||
-				unlock_file(SHADOW_LCK) == -1){
-				fprintf(stderr,"can't unlock the file.\n");
+			if(unlock_files() == -1){
+				fprintf(stderr,"can't unlock the files.\n");
 				return -1;
 			}	
 		}
@@ -3190,7 +3192,7 @@ static int edit_shdow_file(char *username, char *hash, int operation, char *chan
 	if(operation == CH_PWD && !hash) return -1;
 	if(operation == CH_USRNAME && !changes) return -1;
 
-	FILE *fp = fopen(SHADOW, "a+");
+	FILE *fp = fopen(SHADOW, "w");
 	if(!fp){
 		fprintf(stderr,"can't open '%s' file.\n",SHADOW);
 		return -1;
@@ -3204,7 +3206,6 @@ static int edit_shdow_file(char *username, char *hash, int operation, char *chan
 		return -1;
 	}
 
-	rewind(fp);
 	int columns =  3064;
 	char line[columns];
 	memset(line,0,columns);
@@ -3307,7 +3308,7 @@ static int edit_shdow_file(char *username, char *hash, int operation, char *chan
 
 static int edit_passwd_file(char *username, char *changes, int field)
 {
-	FILE *fp = fopen(PASSWD,"a+");
+	FILE *fp = fopen(PASSWD,"e");
 	if(!fp){
 		fprintf(stderr,"can't open '%s'.\n",PASSWD);
 		return -1;
@@ -3463,6 +3464,353 @@ static int edit_passwd_file(char *username, char *changes, int field)
 	}
 
 	if(rename(temp,PASSWD) != 0) {
+		fprintf(stderr,"can't rename %s", temp);
+		return -1;
+	}
+
+	return 0;
+
+}
+static int edit_group_file(char *groupname, char *changes)
+{
+	FILE *fp = fopen(GP,"r");
+	if(!fp){
+		fprintf(stderr,"can't open '%s'.\n",GP);
+		return -1;
+	}
+
+	char *temp = "/etc/temp.pswd";
+	FILE *tmp = fopen(temp,"w");
+	if(!tmp){
+		fprintf(stderr,"can't open '%s'.\n",temp);
+		fclose(fp);
+		return -1;
+	}
+
+	int columns = 3048;
+	char line[columns];
+	memset(line,0,columns);
+
+	while(fgets(line,columns,fp)){
+		if(strstr(line,groupname) == NULL){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;
+		}
+
+		size_t l = strlen(line)+1;
+		char cpy_line[l];
+		memset(cpy_line,0,l);
+		strncpy(cpy_line,line,l);
+
+		char *t = strtok(cpy_line,":");
+		if(!t){
+			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			fclose(fp);
+			fclose(tmp);
+			if(remove(temp) != 0) 
+				fprintf(stderr,"can't delete '%s'\n", temp);
+			return -1;
+		}
+
+		if(strncmp(t,groupname,strlen(groupname)+1) != 0){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;	
+		}
+
+
+		size_t second_str_l = strlen(cpy_line);
+		char second_str[second_str_l];
+		memset(second_str,0,second_str_l);
+		strncpy(second_str,cpy_line,second_str_l+1);
+
+		/* the + 2 accounts for one '\0' and one ':'*/
+		size_t total_l = strlen(changes) + second_str_l + 2;
+		char new_line[total_l];
+		if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
+			fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
+			fclose(fp);
+			fclose(tmp);
+			if(remove(temp) != 0) 
+				fprintf(stderr,"can't delete '%s'\n", temp);
+			return -1;
+		}
+
+		fputs(new_line,tmp);
+		memset(line,0,columns);
+	}
+
+
+	fclose(tmp);
+	fclose(fp);
+
+	if(remove(GP) != 0) {
+		fprintf(stderr,"can't delete %s", GP);
+		return -1;
+	}
+
+	if(rename(temp,GP) != 0) {
+		fprintf(stderr,"can't rename %s", temp);
+		return -1;
+	}
+
+	return 0;
+}
+static int edit_gshadow_file(char *username, char *changes)
+{
+	FILE *fp = fopen(G_SHADOW,"r");
+	if(!fp){
+		fprintf(stderr,"can't open '%s'.\n",G_SHADOW);
+		return -1;
+	}
+	
+	char *temp = "/etc/temp.gshd";
+	FILE *tmp = fopen(temp,"w");
+	if(!tmp){
+		fprintf(stderr,"can't open '%s'.\n",temp);
+		fclose(fp);
+		return -1;
+	}
+
+	int columns = 3048;
+	char line[columns];
+	memset(line,0,columns);
+
+
+	while(fgets(line,columns,fp)){
+		if(strstr(line,username) == NULL){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;
+		}
+
+		size_t l = strlen(line)+1;
+		char cpy_line[l];
+		memset(cpy_line,0,l);
+		strncpy(cpy_line,line,l);
+
+		char *t = strtok(cpy_line,":");
+		if(!t){
+			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			fclose(fp);
+			fclose(tmp);
+			if(remove(temp) != 0) 
+				fprintf(stderr,"can't delete '%s'\n", temp);
+			return -1;
+		}
+
+		if(strncmp(t,username,strlen(username)+1) != 0){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;	
+		}
+
+
+		size_t second_str_l = strlen(cpy_line);
+		char second_str[second_str_l];
+		memset(second_str,0,second_str_l);
+		strncpy(second_str,cpy_line,second_str_l+1);
+
+		/* the + 2 accounts for one '\0' and one ':'*/
+		size_t total_l = strlen(changes) + second_str_l + 2;
+		char new_line[total_l];
+		if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
+			fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
+			fclose(fp);
+			fclose(tmp);
+			if(remove(temp) != 0) 
+				fprintf(stderr,"can't delete '%s'\n", temp);
+			return -1;
+		}
+
+		fputs(new_line,tmp);
+		memset(line,0,columns);
+	}
+
+	fclose(tmp);
+	fclose(fp);
+
+	if(remove(G_SHADOW) != 0) {
+		fprintf(stderr,"can't delete %s", G_SHADOW);
+		return -1;
+	}
+
+	if(rename(temp,G_SHADOW) != 0) {
+		fprintf(stderr,"can't rename %s", temp);
+		return -1;
+	}
+
+	return 0;
+}
+static int edit_subgid_file(char *username, char *changes)
+{
+	FILE *fp = fopen(SUB_GID,"r");
+	if(!fp){
+		fprintf(stderr,"can't open '%s'.\n",SUB_GID);
+		return -1;
+	}
+	
+	char *temp = "/etc/temp.subgid";
+	FILE *tmp = fopen(temp,"w");
+	if(!tmp){
+		fprintf(stderr,"can't open '%s'.\n",temp);
+		fclose(fp);
+		return -1;
+	}
+
+	int columns = 3048;
+	char line[columns];
+	memset(line,0,columns);
+
+
+	while(fgets(line,columns,fp)){
+		if(strstr(line,username) == NULL){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;
+		}
+
+		size_t l = strlen(line)+1;
+		char cpy_line[l];
+		memset(cpy_line,0,l);
+		strncpy(cpy_line,line,l);
+
+		char *t = strtok(cpy_line,":");
+		if(!t){
+			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			fclose(fp);
+			fclose(tmp);
+			if(remove(temp) != 0) 
+				fprintf(stderr,"can't delete '%s'\n", temp);
+			return -1;
+		}
+
+		if(strncmp(t,username,strlen(username)+1) != 0){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;	
+		}
+
+
+		size_t second_str_l = strlen(cpy_line);
+		char second_str[second_str_l];
+		memset(second_str,0,second_str_l);
+		strncpy(second_str,cpy_line,second_str_l+1);
+
+		/* the + 2 accounts for one '\0' and one ':'*/
+		size_t total_l = strlen(changes) + second_str_l + 2;
+		char new_line[total_l];
+		if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
+			fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
+			fclose(fp);
+			fclose(tmp);
+			if(remove(temp) != 0) 
+				fprintf(stderr,"can't delete '%s'\n", temp);
+			return -1;
+		}
+
+		fputs(new_line,tmp);
+		memset(line,0,columns);
+	}
+
+
+	fclose(tmp);
+	fclose(fp);
+
+	if(remove(SUB_GID) != 0) {
+		fprintf(stderr,"can't delete %s", SUB_GID);
+		return -1;
+	}
+
+	if(rename(temp,SUB_GID) != 0) {
+		fprintf(stderr,"can't rename %s", temp);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int edit_subuid_file(char *username, char *changes)
+{
+	FILE *fp = fopen(SUB_UID,"r");
+	if(!fp){
+		fprintf(stderr,"can't open '%s'.\n",SUB_UID);
+		return -1;
+	}
+
+	char *temp = "/etc/temp.suid";
+	FILE *tmp = fopen(temp,"w");
+	if(!tmp){
+		fprintf(stderr,"can't open '%s'.\n",temp);
+		fclose(fp);
+		return -1;
+	}
+
+	int columns = 3048;
+	char line[columns];
+	memset(line,0,columns);
+	
+	while(fgets(line,columns,fp)){
+		if(strstr(line,username) == NULL){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;
+		}
+
+		size_t l = strlen(line)+1;
+		char cpy_line[l];
+		memset(cpy_line,0,l);
+		strncpy(cpy_line,line,l);
+
+		char *t = strtok(cpy_line,":");
+		if(!t){
+			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			fclose(fp);
+			fclose(tmp);
+			if(remove(temp) != 0) 
+				fprintf(stderr,"can't delete '%s'\n", temp);
+			return -1;
+		}
+
+		if(strncmp(t,username,strlen(username)+1) != 0){
+			fputs(line,tmp);
+			memset(line,0,columns);
+			continue;	
+		}
+
+
+		size_t second_str_l = strlen(cpy_line);
+		char second_str[second_str_l];
+		memset(second_str,0,second_str_l);
+		strncpy(second_str,cpy_line,second_str_l+1);
+
+		/* the + 2 accounts for one '\0' and one ':'*/
+		size_t total_l = strlen(changes) + second_str_l + 2;
+		char new_line[total_l];
+		if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
+			fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
+			fclose(fp);
+			fclose(tmp);
+			if(remove(temp) != 0) 
+				fprintf(stderr,"can't delete '%s'\n", temp);
+			return -1;
+		}
+
+		fputs(new_line,tmp);
+		memset(line,0,columns);
+	}
+
+
+	fclose(tmp);
+	fclose(fp);
+
+	if(remove(SUB_UID) != 0) {
+		fprintf(stderr,"can't delete %s", SUB_UID);
+		return -1;
+	}
+
+	if(rename(temp,SUB_UID) != 0) {
 		fprintf(stderr,"can't rename %s", temp);
 		return -1;
 	}
