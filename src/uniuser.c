@@ -395,8 +395,10 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 }
 
 
-int add_user(char *username, char *paswd, char *full_name)
+int add_user(char *username, char *paswd, char *gecos)
 {
+	if(!username) return -1;
+
 	if(user_already_exist(username)) {
 		return EALRDY_U;	
 	}

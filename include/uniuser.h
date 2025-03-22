@@ -157,7 +157,7 @@ struct user_info{
 
 /* the API available with this library*/
 int crypt_pswd(char *paswd, char **hash, char* salt);
-int add_user(char *username, char *paswd, char *full_name);
+int add_user(char *username, char *paswd, char *gecos);
 int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...);
 int login(char *username, char *passwd, int mod);
 int get_user_info(char *username, struct user_info *ui);
