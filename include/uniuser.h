@@ -75,6 +75,7 @@
 #define NO_IDs 21 /*no reusalble GIds*/
 #define EROOT 22 /*try to change or delete ROOT*/
 #define EGECOS 23 /*edit user  GECOS faield*/
+#define EUSRNAME 24 /*edit user's username failed*/
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/
@@ -122,7 +123,7 @@ struct sys_param {
 #define MAX_STRING_SIZE 2048
 struct user_info{
 	char username[MAX_STRING_SIZE];
-	char full_name[MAX_STRING_SIZE];
+	char gecos[MAX_STRING_SIZE];
 	char dir[MAX_STRING_SIZE];
 	char group_list[MAX_STRING_SIZE];
 	int uid;

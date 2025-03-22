@@ -52,7 +52,7 @@ static int unlock_file(char *file_name);
 static int unlock_files();
 static int write_file(char *file_name, char *entry, size_t entry_size, char *username);
 static int shdw_write(char *username, char *hash, struct sys_param *param);
-static int psdw_write(char *username, int uid, int *gid,char* full_name);
+static int psdw_write(char *username, int uid, int *gid,char* gecos);
 static int group_write(char *username, int uid);
 static int gshdw_write(char *username);
 static int subuid_write(char *username, unsigned int sub_uid, int count);
@@ -70,12 +70,12 @@ static int is_user_admin(char* username);
 static int str_contain_commas(char *str);
 static int extract_salt(char *pswd_hashed, char **salt);
 static int start_user_session(struct passwd *pw);
-static int get_full_name(char *username, char *full_name);
+static int get_gecos(char *username, char *gecos);
 static void clean(char *str, char item);
 static int save_IDs(char *file_name, int ID);
 static int get_conf(int conf);
 static int get_reuse_ID(char *file_name);
-static int edit_shdow_file(char *username, char *hash);
+static int edit_shdow_file(char *username, char *hash, int operation, char *changes);
 static int edit_passwd_file(char *username, char *changes, int field);
 
 #if !HAVE_LIBSTROP
@@ -286,7 +286,7 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 
 			
 			/* write the new passwd to file  */		
-			if(edit_shdow_file(username,hash)){
+			if(edit_shdow_file(username,hash,CH_PWD,NULL)){
 				printf("edit shadows files failed.\n");
 				free(hash);
 				return -1;
@@ -304,6 +304,8 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	case CH_GECOS:
 	{
 		if(!user_already_exist(username)) return ENONE_U;
+
+		if (n_elem > 1) return -1;
 
 		char *changes = va_arg(args,char*);
 		/*lock files */
@@ -325,6 +327,37 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	}
 	case CH_USRNAME:
 	{
+		if(!user_already_exist(username)) return ENONE_U;
+
+		if (n_elem > 1) return -1;
+		
+		char *changes = va_arg(args, char*);
+		if(changes){
+			/*lock files */
+			if((lock_file(PASSWD_LCK) == -1) || 
+					lock_file(SHADOW_LCK) == -1) {
+				fprintf(stderr,"can't lock the file.\n");
+				return -1;
+			}
+
+
+			if(edit_passwd_file(username,changes,CH_USRNAME) == -1)
+				return EUSRNAME;
+
+			/* write the new username to shadow file  */		
+			if(edit_shdow_file(username,NULL,CH_USRNAME, changes)){
+				printf("edit shadows files failed.\n");
+				return -1;
+			}
+
+
+			if(unlock_file(PASSWD_LCK) == -1 ||
+				unlock_file(SHADOW_LCK) == -1){
+				fprintf(stderr,"can't unlock the file.\n");
+				return -1;
+			}	
+		}
+
 		break;
 	}
 	case (CH_GECOS | CH_PWD):
@@ -352,7 +385,7 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 
 			
 			/* write the new passwd to file  */		
-			if(edit_shdow_file(username,hash)){
+			if(edit_shdow_file(username,hash,CH_PWD,NULL) == -1){
 				printf("edit shadows files failed.\n");
 				free(hash);
 				return -1;
@@ -559,9 +592,9 @@ int add_user(char *username, char *paswd, char *gecos)
      *  data consistency
      * */
 
-	if(full_name){
+	if(gecos){
 		
-		if(!psdw_write(username,uid,((gid == uid) || (gid < uid)) ? NULL : &gid,full_name)) {
+		if(!psdw_write(username,uid,((gid == uid) || (gid < uid)) ? NULL : &gid,gecos)) {
 			fprintf(stderr,
 					"psdw_write() failed, %s:%d.\n",
 					__FILE__,__LINE__-3);
@@ -1729,7 +1762,7 @@ static int shdw_write(char *username, char *hash, struct sys_param *param)
 	return 1;
 }
 
-static int psdw_write(char *username, int uid,int *gid, char* full_name)
+static int psdw_write(char *username, int uid,int *gid, char* gecos)
 {	
 	size_t hm_pth_l = strlen(hm) + strlen(username) + 2;
 	char home_path[hm_pth_l];
@@ -1744,11 +1777,17 @@ static int psdw_write(char *username, int uid,int *gid, char* full_name)
 
 	size_t passwd_entry_length = 0; 
 	
-	if(full_name){
+	if(gecos){
+	/*
+	 * 6 number of colons
+	 * 1 for the x in password field
+	 * 1 for '\n'
+	 * 1 for '\0'
+	 **/
 
-	passwd_entry_length = strlen(username) + hm_pth_l +\
+		passwd_entry_length = strlen(username) + hm_pth_l +\
 				    (number_of_digit(uid)*2) + strlen(bsh)+\
-				    strlen(full_name) + 6 + 1 + 1 + 1;
+				    strlen(gecos) + 6 + 1 + 1 + 1;
 	}else {
 	/*
 	 * 6 number of colons
@@ -1756,7 +1795,7 @@ static int psdw_write(char *username, int uid,int *gid, char* full_name)
 	 * 1 for '\n'
 	 * 1 for '\0'
 	 **/
-	passwd_entry_length = strlen(username) + hm_pth_l +\
+		passwd_entry_length = strlen(username) + hm_pth_l +\
 				    (number_of_digit(uid)*2) + strlen(bsh)+\
 				    6 + 1 + 1 + 1;
 	}
@@ -1764,10 +1803,10 @@ static int psdw_write(char *username, int uid,int *gid, char* full_name)
 	char passwd_entry[passwd_entry_length];
 	memset(passwd_entry,0,passwd_entry_length);
 
-	if(full_name){
+	if(gecos){
 		if(snprintf(passwd_entry,passwd_entry_length,
 					"%s:x:%d:%d:%s:%s:%s\n",
-					username,uid,gid ? *gid : uid,full_name,home_path,bsh) < 0) {
+					username,uid,gid ? *gid : uid,gecos,home_path,bsh) < 0) {
 			fprintf(stderr,
 					"snprintf() failed , %s:%d.\n",
 					__FILE__,__LINE__-5);
@@ -2691,10 +2730,9 @@ int get_user_info(char *username, struct user_info* ui)
 
 	strncpy((*ui).dir,pw->pw_dir,strlen(pw->pw_dir));
 			
-	char full_name[1024];
-	memset(full_name,0,1024);
+	char geco[1024] = {0};
 	
-	if(get_full_name(username,full_name) == 0) strcpy((*ui).full_name,full_name);
+	if(get_gecos(username,geco) == 0) strcpy((*ui).gecos,geco);
 
 	(*ui).uid = pw->pw_uid;
 	(*ui).gid = pw->pw_gid;	
@@ -2981,7 +3019,7 @@ static int start_user_session(struct passwd *pw)
 	waitpid(pid,NULL,0);
 	return 0;
 }
-static int get_full_name(char *username, char *full_name)
+static int get_gecos(char *username, char *gecos)
 {
 	FILE *fp = fopen(PASSWD,"r");
 	if(!fp){
@@ -3007,7 +3045,7 @@ static int get_full_name(char *username, char *full_name)
 				return -1;
 			}
 
-			strncpy(full_name,t,strlen(t));
+			strncpy(gecos,t,strlen(t));
 			fclose(fp);
 			return 0;
 		}
@@ -3147,8 +3185,11 @@ static int get_reuse_ID(char *file_name)
 	
 }
 
-static int edit_shdow_file(char *username, char *hash)
+static int edit_shdow_file(char *username, char *hash, int operation, char *changes)
 {
+	if(operation == CH_PWD && !hash) return -1;
+	if(operation == CH_USRNAME && !changes) return -1;
+
 	FILE *fp = fopen(SHADOW, "a+");
 	if(!fp){
 		fprintf(stderr,"can't open '%s' file.\n",SHADOW);
@@ -3182,38 +3223,67 @@ static int edit_shdow_file(char *username, char *hash)
 					fprintf(stderr,"can't delete '%s'\n", temp);
 				return -1;
 			}
-			
+
 			if(strncmp(t,username,strlen(username)) != 0){
 				fputs(line,tmp);
 				memset(line,0,l);
 				continue;
 			}
-				
-			int pos = 0;
-			for(int counter = 0, i = 0 ; counter < 2; i++){
-				if (line[i] == ':'){
-					pos = i;
-					counter++;
-				}
-			}
 
-			
-			char new_line[columns];
-			memset(new_line,0,columns);
-			size_t size = strlen(username)+ strlen(hash) + strlen(&line[pos])+2;
-			if(snprintf(new_line,size,"%s:%s%s",username,hash,&line[pos]) < 0){
-				fprintf(stderr,"snprintf() failed, %s:%d.",__FILE__,__LINE__-1);
-				fclose(fp);
-				fclose(tmp);
-				if(remove(temp) != 0) 
-					fprintf(stderr,"can't delete '%s'\n", temp);
-				return -1;
+			switch(operation){
+			case CH_PWD:
+			{
+				int pos = 0;
+				for(int counter = 0, i = 0 ; counter < 2; i++){
+					if (line[i] == ':'){
+						pos = i;
+						counter++;
+					}
+				}
+
+				char new_line[columns];
+				memset(new_line,0,columns);
+				size_t size = strlen(username)+ strlen(hash) + strlen(&line[pos])+2;
+				if(snprintf(new_line,size,"%s:%s%s",username,hash,&line[pos]) < 0){
+					fprintf(stderr,"snprintf() failed, %s:%d.",__FILE__,__LINE__-1);
+					fclose(fp);
+					fclose(tmp);
+					if(remove(temp) != 0) 
+						fprintf(stderr,"can't delete '%s'\n", temp);
+					return -1;
+				}
+				fputs(new_line,tmp);
+				memset(line,0,columns);
+				break;
+
 			}
-			fputs(new_line,tmp);
-			memset(line,0,columns);
-			continue;
+			case CH_USRNAME:
+			{
+				size_t second_str_l = strlen(cpy_line);
+				char second_str[second_str_l];
+				memset(second_str,0,second_str_l);
+				strncpy(second_str,cpy_line,second_str_l+1);
+
+				/* the + 2 accounts for one '\0' and one ':'*/
+				size_t total_l = strlen(changes) + second_str_l + 2;
+				char new_line[total_l];
+				if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
+					fprintf(stderr,"snprintf() failed, %s:%d.\n",__FILE__,__LINE__-1);
+					fclose(fp);
+					fclose(tmp);
+					if(remove(temp) != 0) 
+						fprintf(stderr,"can't delete '%s'\n", temp);
+					return -1;
+				}
+
+				fputs(new_line,tmp);
+				memset(line,0,columns);
+				break;
+			}
+			default:
+				break;
+			}
 		}
-	
 		fputs(line,tmp);
 		memset(line,0,columns);
 	}
@@ -3287,7 +3357,25 @@ static int edit_passwd_file(char *username, char *changes, int field)
 		switch(field){
 		case CH_USRNAME:
 		{
-			
+			size_t second_str_l = strlen(cpy_line);
+			char second_str[second_str_l];
+			memset(second_str,0,second_str_l);
+			strncpy(second_str,cpy_line,second_str_l+1);
+
+			/* the + 2 accounts for one '\0' and one ':'*/
+			size_t total_l = strlen(changes) + second_str_l + 2;
+			char new_line[total_l];
+			if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
+				fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
+				fclose(fp);
+				fclose(tmp);
+				if(remove(temp) != 0) 
+					fprintf(stderr,"can't delete '%s'\n", temp);
+				return -1;
+			}
+
+			fputs(new_line,tmp);
+			memset(line,0,columns);
 			break;
 		}
 		case CH_GECOS:
