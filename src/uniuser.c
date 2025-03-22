@@ -345,11 +345,11 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 
 
 			if(edit_passwd_file(username,changes,CH_USRNAME) == -1 ||
-				edit_shdow_file(username,NULL,CH_USRNAME, changes) == -1)
+				edit_shdow_file(username,NULL,CH_USRNAME, changes) == -1 ||
 				edit_subuid_file(username,changes) == -1 ||
 				edit_subgid_file(username,changes) == -1 ||
 				edit_gshadow_file(username,changes) == -1 ||
-				edit_group_file(username,changes) == -1 {
+				edit_group_file(username,changes) == -1) {
 				return EUSRNAME;
 			}
 
