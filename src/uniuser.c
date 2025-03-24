@@ -474,6 +474,8 @@ int add_user(char *username, char *paswd, char *gecos)
 		strncpy(param.ENCRYPT_METHOD,ENCRYPT_METHOD,strlen(ENCRYPT_METHOD)+1);
 	}
 
+	check_sys_param(&param);
+
 	int uid = 0;
 	int gid = 0;
 	if(get_conf(REUSE) == REUSE_UID_GID ){
