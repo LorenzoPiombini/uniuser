@@ -3827,6 +3827,27 @@ static int edit_subuid_file(char *username, char *changes)
 
 static void check_sys_param(struct sys_param *param)
 {
-	
+	if((*param).UID_MAX == 0)
+		(*param).UID_MAX = UID_MAX;
+	if((*param).SUB_UID_MIN == 0)
+		(*param).SUB_UID_MIN = SUB_UID_MIN;
+	if((*param).SUB_UID_MAX == 0)
+		(*param).SUB_UID_MAX = SUB_UID_MAX;
+	if((*param).GID_MAX == 0)
+		(*param).GID_MAX = GID_MAX;
+	if((*param).SUB_GID_MIN == 0)
+		(*param).SUB_GID_MIN = SUB_GID_MIN;
+	if((*param).SUB_GID_MAX == 0)
+		(*param).SUB_GID_MAX = SUB_GID_MAX;
+	if((*param).SUB_GID_COUNT == 0)
+		(*param).SUB_GID_COUNT = SUB_GID_COUNT;
+	if((*param).PASS_MAX_DAYS == 0)
+		(*param).PASS_MAX_DAYS = PASS_MAX_DAYS;
+	if((*param).PASS_MIN_DAYS == 0)
+		(*param).PASS_MIN_DAYS = PASS_MIN_DAYS;
+	if((*param).PASS_WARN_AGE == 0)
+		(*param).PASS_WARN_AGE = PASS_WARN_AGE;
+	if((*param).ENCRYPT_METHOD[0] == '\0' )
+		strncpy((*param.ENCRYPT_METHOD,ENCRYPT_METHOD,strlen(ENCRYPT_METHOD)+1);
 
 } 
