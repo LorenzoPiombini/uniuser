@@ -81,6 +81,7 @@ static int edit_subuid_file(char *username, char *changes);
 static int edit_subgid_file(char *username, char *changes);
 static int edit_gshadow_file(char *username, char *changes);
 static int edit_group_file(char *groupname, char *changes);
+static void check_sys_param(struct sys_param *param);
 
 #if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
@@ -3822,3 +3823,10 @@ static int edit_subuid_file(char *username, char *changes)
 	return 0;
 
 }
+
+
+static void check_sys_param(struct sys_param *param)
+{
+	
+
+} 
