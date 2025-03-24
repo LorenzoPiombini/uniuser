@@ -3850,6 +3850,6 @@ static void check_sys_param(struct sys_param *param)
 	if((*param).PASS_WARN_AGE == 0)
 		(*param).PASS_WARN_AGE = PASS_WARN_AGE;
 	if((*param).ENCRYPT_METHOD[0] == '\0' )
-		strncpy((*param.ENCRYPT_METHOD,ENCRYPT_METHOD,strlen(ENCRYPT_METHOD)+1);
+		strncpy((*param).ENCRYPT_METHOD,ENCRYPT_METHOD,strlen(ENCRYPT_METHOD)+1);
 
 } 
