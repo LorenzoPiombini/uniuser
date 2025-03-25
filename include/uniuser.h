@@ -31,6 +31,12 @@
 #define SHADOW_LCK "/etc/shadow.lock"
 #define SKEL "/etc/skel"
 
+/*Files for testing */
+#define PASSWD_T "/etc/passwd.test"
+#define GP_T "/etc/group.test"
+#define G_SHADOW_T "/etc/gshadow.test"
+
+
 /* used for randomization in password hashing*/
 #define RAN_DEV "/dev/urandom"
 

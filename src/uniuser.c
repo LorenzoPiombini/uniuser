@@ -345,12 +345,12 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 			}
 
 
-			if(edit_passwd_file(username,changes,CH_USRNAME) == -1 ){
+			if(edit_passwd_file(username,changes,CH_USRNAME) == -1 ||
 				/*edit_shdow_file(username,NULL,CH_USRNAME, changes) == -1 ||
 				edit_subuid_file(username,changes) == -1 ||
 				edit_subgid_file(username,changes) == -1 ||
-				edit_gshadow_file(username,changes) == -1 ||
-				edit_group_file(username,changes) == -1) { */
+				edit_gshadow_file(username,changes) == -1 || */
+				edit_group_file(username,changes) == -1) { 
 				if(unlock_files() == -1)
 					fprintf(stderr,"can't unlock the files.\n");
 
@@ -3316,7 +3316,7 @@ static int edit_passwd_file(char *username, char *changes, int field)
 {
 	FILE *fp = fopen(PASSWD_T,"r");
 	if(!fp){
-		fprintf(stderr,"can't open '%s'.\n",PASSWD);
+		fprintf(stderr,"can't open '%s'.\n",PASSWD_T);
 		return -1;
 	}
 	
@@ -3487,7 +3487,7 @@ static int edit_passwd_file(char *username, char *changes, int field)
 	fclose(fp);
 
 	if(remove(PASSWD_T) != 0) {
-		fprintf(stderr,"can't delete %s", PASSWD_T);
+		fprintf(stderr,"can't delete %s", PASSWD);
 		return -1;
 	}
 
@@ -3501,9 +3501,9 @@ static int edit_passwd_file(char *username, char *changes, int field)
 }
 static int edit_group_file(char *groupname, char *changes)
 {
-	FILE *fp = fopen(GP,"r");
+	FILE *fp = fopen(GP_T,"r");
 	if(!fp){
-		fprintf(stderr,"can't open '%s'.\n",GP);
+		fprintf(stderr,"can't open '%s'.\n",GP_T);
 		return -1;
 	}
 
@@ -3547,23 +3547,19 @@ static int edit_group_file(char *groupname, char *changes)
 			continue;	
 		}
 
-
-		size_t second_str_l = strlen(cpy_line);
-		char second_str[second_str_l];
-		memset(second_str,0,second_str_l);
-		strncpy(second_str,cpy_line,second_str_l+1);
+		
+		size_t old_usrname_l = strlen(t);
+		size_t new_usrname_l = strlen(changes);
+		size_t last_str_l = strlen(&cpy_line[old_usrname_l+1]);
 
 		/* the + 2 accounts for one '\0' and one ':'*/
-		size_t total_l = strlen(changes) + second_str_l + 2;
-		char new_line[total_l];
-		if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
-			fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
-			fclose(fp);
-			fclose(tmp);
-			if(remove(temp) != 0) 
-				fprintf(stderr,"can't delete '%s'\n", temp);
-			return -1;
-		}
+		size_t new_line_l = new_usrname_l + last_str_l + 2;
+		char new_line[new_line_l];
+		memset(new_line,0,new_line_l);
+
+		strncpy(new_line,changes,new_usrname_l);
+		new_line[new_usrname_l] = ':';
+		strncat(new_line,&cpy_line[old_usrname_l+1],last_str_l);
 
 		fputs(new_line,tmp);
 		memset(line,0,columns);
@@ -3573,12 +3569,12 @@ static int edit_group_file(char *groupname, char *changes)
 	fclose(tmp);
 	fclose(fp);
 
-	if(remove(GP) != 0) {
-		fprintf(stderr,"can't delete %s", GP);
+	if(remove(GP_T) != 0) {
+		fprintf(stderr,"can't delete %s", GP_T);
 		return -1;
 	}
 
-	if(rename(temp,GP) != 0) {
+	if(rename(temp,GP_T) != 0) {
 		fprintf(stderr,"can't rename %s", temp);
 		return -1;
 	}
@@ -3587,9 +3583,9 @@ static int edit_group_file(char *groupname, char *changes)
 }
 static int edit_gshadow_file(char *username, char *changes)
 {
-	FILE *fp = fopen(G_SHADOW,"r");
+	FILE *fp = fopen(G_SHADOW_T,"r");
 	if(!fp){
-		fprintf(stderr,"can't open '%s'.\n",G_SHADOW);
+		fprintf(stderr,"can't open '%s'.\n",G_SHADOW_T);
 		return -1;
 	}
 	
@@ -3635,22 +3631,18 @@ static int edit_gshadow_file(char *username, char *changes)
 		}
 
 
-		size_t second_str_l = strlen(cpy_line);
-		char second_str[second_str_l];
-		memset(second_str,0,second_str_l);
-		strncpy(second_str,cpy_line,second_str_l+1);
+		size_t old_usrname_l = strlen(t);
+		size_t new_usrname_l = strlen(changes);
+		size_t last_str_l = strlen(&cpy_line[old_usrname_l+1]);
 
 		/* the + 2 accounts for one '\0' and one ':'*/
-		size_t total_l = strlen(changes) + second_str_l + 2;
-		char new_line[total_l];
-		if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
-			fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
-			fclose(fp);
-			fclose(tmp);
-			if(remove(temp) != 0) 
-				fprintf(stderr,"can't delete '%s'\n", temp);
-			return -1;
-		}
+		size_t new_line_l = new_usrname_l + last_str_l + 2;
+		char new_line[new_line_l];
+		memset(new_line,0,new_line_l);
+
+		strncpy(new_line,changes,new_usrname_l);
+		new_line[new_usrname_l] = ':';
+		strncat(new_line,&cpy_line[old_usrname_l+1],last_str_l);
 
 		fputs(new_line,tmp);
 		memset(line,0,columns);
@@ -3659,12 +3651,12 @@ static int edit_gshadow_file(char *username, char *changes)
 	fclose(tmp);
 	fclose(fp);
 
-	if(remove(G_SHADOW) != 0) {
-		fprintf(stderr,"can't delete %s", G_SHADOW);
+	if(remove(G_SHADOW_T) != 0) {
+		fprintf(stderr,"can't delete %s", G_SHADOW_T);
 		return -1;
 	}
 
-	if(rename(temp,G_SHADOW) != 0) {
+	if(rename(temp,G_SHADOW_T) != 0) {
 		fprintf(stderr,"can't rename %s", temp);
 		return -1;
 	}
