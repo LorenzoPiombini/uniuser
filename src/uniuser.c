@@ -332,7 +332,6 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	}
 	case CH_USRNAME:
 	{
-#if 0
 		if(!user_already_exist(username)) return ENONE_U;
 
 		if (n_elem > 1) return -1;
@@ -346,12 +345,15 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 			}
 
 
-			if(edit_passwd_file(username,changes,CH_USRNAME) == -1 ||
-				edit_shdow_file(username,NULL,CH_USRNAME, changes) == -1 ||
+			if(edit_passwd_file(username,changes,CH_USRNAME) == -1 ){
+				/*edit_shdow_file(username,NULL,CH_USRNAME, changes) == -1 ||
 				edit_subuid_file(username,changes) == -1 ||
 				edit_subgid_file(username,changes) == -1 ||
 				edit_gshadow_file(username,changes) == -1 ||
-				edit_group_file(username,changes) == -1) {
+				edit_group_file(username,changes) == -1) { */
+				if(unlock_files() == -1)
+					fprintf(stderr,"can't unlock the files.\n");
+
 				return EUSRNAME;
 			}
 
@@ -363,7 +365,6 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 		}
 
 		break;
-#endif
 	}
 	case (CH_GECOS | CH_PWD):
 	{
@@ -3313,7 +3314,7 @@ static int edit_shdow_file(char *username, char *hash, int operation, char *chan
 
 static int edit_passwd_file(char *username, char *changes, int field)
 {
-	FILE *fp = fopen(PASSWD,"e");
+	FILE *fp = fopen(PASSWD_T,"r");
 	if(!fp){
 		fprintf(stderr,"can't open '%s'.\n",PASSWD);
 		return -1;
@@ -3363,28 +3364,48 @@ static int edit_passwd_file(char *username, char *changes, int field)
 		switch(field){
 		case CH_USRNAME:
 		{
-#if 0
-			size_t second_str_l = strlen(cpy_line);
+
+			int pos = 0;
+			for(int i = 0, count = 0; count < 2; i++){
+				if(cpy_line[i] == '/') {
+					if(count == 1) {
+						pos = i;
+						break;
+					}
+					count++;
+				}	
+			}
+
+			size_t old_username_l = strlen(t);
+			size_t second_str_l = pos - (old_username_l + 1) + 1;
 			char second_str[second_str_l];
 			memset(second_str,0,second_str_l);
-			strncpy(second_str,cpy_line,second_str_l+1);
 
-			/* the + 2 accounts for one '\0' and one ':'*/
-			size_t total_l = strlen(changes) + second_str_l + 2;
+			strncpy(second_str,&cpy_line[old_username_l+1],second_str_l);
+
+			/* the + 4 accounts for 
+			 * one '\0',
+			 * two':' 
+			 * one '\n'
+			 * */
+			size_t new_usrname_l = strlen(changes);
+			size_t bash_l =  strlen(bsh);
+			size_t total_l = strlen(changes) * 2 + second_str_l + bash_l + 4;
 			char new_line[total_l];
-			if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
-				fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
-				fclose(fp);
-				fclose(tmp);
-				if(remove(temp) != 0) 
-					fprintf(stderr,"can't delete '%s'\n", temp);
-				return -1;
-			}
+			memset(new_line,0,total_l);
+				
+			strncpy(new_line,changes,new_usrname_l);
+			new_line[new_usrname_l] = ':';
+
+			strncat(new_line,second_str,second_str_l);
+			strncat(new_line,changes,new_usrname_l);
+			strncat(new_line,":",2);
+			strncat(new_line,bsh,bash_l);
+			strncat(new_line,"\n",2);
 
 			fputs(new_line,tmp);
 			memset(line,0,columns);
-			break;
-#endif		
+			break;	
 		}
 		case CH_GECOS:
 		{
@@ -3465,12 +3486,12 @@ static int edit_passwd_file(char *username, char *changes, int field)
 	fclose(tmp);
 	fclose(fp);
 
-	if(remove(PASSWD) != 0) {
-		fprintf(stderr,"can't delete %s", PASSWD);
+	if(remove(PASSWD_T) != 0) {
+		fprintf(stderr,"can't delete %s", PASSWD_T);
 		return -1;
 	}
 
-	if(rename(temp,PASSWD) != 0) {
+	if(rename(temp,PASSWD_T) != 0) {
 		fprintf(stderr,"can't rename %s", temp);
 		return -1;
 	}
