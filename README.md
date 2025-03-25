@@ -4,7 +4,7 @@
 
 # Uniuser A Small User Management Library for Linux
 
-`uniuser` is a lightweight C library designed to programmatically manage users on a Linux operating system. It provides a simple function, `add_user(char *username, char *password)`,  
+`uniuser` is a lightweight C library designed to programmatically manage users on a Linux operating system. It provides a simple function, `add_user(char *username, char *password, char *gecos)`,  
 allowing you to create users securely without relying on shell exposure or risky system calls like `system()`, `popen()`, or the `exec` family.
 
 ## Features
@@ -13,7 +13,8 @@ allowing you to create users securely without relying on shell exposure or risky
 - Includes additional utilities like `del_user()`, `create_group()`, and `edit_group_user()` (see [main.c] for examples).
 
 [main.c]: src/main.c 
-- Comes with a test program, `user_manager`, to demonstrate functionality.
+
+the library provides a command-line tool program `userctl` *(as user control)*, to demonstrate functionality.
 
 
 ## API endpoint
@@ -101,7 +102,25 @@ this will install the library on your machine, and the test program will be call
 on your computer too, meaning you can run it from everywhere in your envirorment like `useradd`.  
 Both `uniuser.so` and `userctl` will be asan lib free.
  
-  
+---
+## FULL LIST COMMAND-LINE TOOL OPTIONS
+
+# (if you build with `sudo make build_prod`, program will be called userctl)
+
+```plain text
+$ sudo ./test <username>  /*add user <username>*/
+$ sudo ./test -eu <username> -p <password> /*add a password <password> to <username>*/
+$ sudo ./test -du <username>  /*delete user  <username>*/
+$ sudo ./test -g <groupname>  /*create a group called <groupname> */
+$ sudo ./test -eg <groupname> -u <username>  /*assign <groupname> to user <username>*/
+
+
+
+```
+
+---
+
+
 ## Using the Library in Your Code
 
 Once installed, you can include the library in your C projects. Below is a basic example:
