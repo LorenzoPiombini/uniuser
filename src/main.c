@@ -136,6 +136,54 @@ int main(int argc, char** argv)
 			break;
 		}
 		break;
+	case USER_AND_PSWD_AND_GECOS:
+		ret = add_user(username,password,changes);
+		switch(ret) {
+		case EMAX_U:  
+			fprintf(stderr,"(%s): exceeded the maximum user number.\n\
+					(%s): user '%s' not added.\n",Prog,Prog,username);
+			return -1;
+		case EALRDY_U: 
+			fprintf(stderr,"(%s): user '%s' already exist.\n",Prog,username);
+			break;
+		case ESGID: 
+			fprintf(stderr,"(%s): SUB_GID_MAX overflowed.\n",Prog);
+			return -1;
+		case ESUID: 
+			fprintf(stderr,"(%s): SUB_UID_MAX overflowed.\n",Prog);
+			return -1;
+		case -1:	
+			fprintf(stderr,"(%s): adding user '%s' failed.\n",Prog,username);
+			return -1;
+		default:
+			fprintf(stdout,"(%s): user %s, added.\n",Prog,username);
+			break;
+		}
+		break;
+	case USER_AND_GECOS:
+		ret = add_user(username,NULL,changes);
+		switch(ret) {
+		case EMAX_U:  
+			fprintf(stderr,"(%s): exceeded the maximum user number.\n\
+					(%s): user '%s' not added.\n",Prog,Prog,username);
+			return -1;
+		case EALRDY_U: 
+			fprintf(stderr,"(%s): user '%s' already exist.\n",Prog,username);
+			break;
+		case ESGID: 
+			fprintf(stderr,"(%s): SUB_GID_MAX overflowed.\n",Prog);
+			return -1;
+		case ESUID: 
+			fprintf(stderr,"(%s): SUB_UID_MAX overflowed.\n",Prog);
+			return -1;
+		case -1:	
+			fprintf(stderr,"(%s): adding user '%s' failed.\n",Prog,username);
+			return -1;
+		default:
+			fprintf(stdout,"(%s): user %s, added.\n",Prog,username);
+			break;
+		}
+		break;
 	case DEL_GROUP:
 		ret = del_group(group_name);
 		switch(ret){
@@ -220,6 +268,30 @@ int main(int argc, char** argv)
 			break;
 		}
 		break;
+	case EDIT_USER:
+		if(changes[0] == '\0'){
+			fprintf(stderr,"(%s): new username missing.\n",Prog);
+			break;
+		}
+
+		ret = edit_user(username,NULL,operation,1,changes);
+		switch(ret){
+		case -1:
+		case EUSRNAME:
+			fprintf(stdout,"(%s): can't change username for user '%s'.\n",Prog,username);
+			break;
+		case EUSRSAME:
+			fprintf(stdout,"(%s): username is already '%s'.\n",Prog,changes);
+			break;
+		case ENONE_U:
+			fprintf(stderr,"(%s): user '%s' does not exist.\n",Prog, username);
+			break;
+		default:
+			fprintf(stdout,"(%s): username '%s' changed to '%s'.\n",Prog,username,changes);
+			break;
+		}
+		break;
+
 
 	default:
 		fprintf(stderr,"(%s): invalid options or operation not allowed.\n",Prog);
