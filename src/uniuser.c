@@ -338,6 +338,13 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 		
 		char *changes = va_arg(args, char*);
 		if(changes){
+			if(strncmp(username,changes,strlen(changes)+1) == 0)
+				return EUSRSAME;
+
+			struct user_info ui = {0};
+			if(get_user_info(username,&ui) == -1)
+				return EUSRNAME;
+
 			/*lock files */
 			if(lock_files() == -1) { 
 				fprintf(stderr,"can't lock the file.\n");
@@ -346,10 +353,10 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 
 
 			if(edit_passwd_file(username,changes,CH_USRNAME) == -1 ||
-				/*edit_shdow_file(username,NULL,CH_USRNAME, changes) == -1 ||
-				edit_subuid_file(username,changes) == -1 ||
-				edit_subgid_file(username,changes) == -1 ||
-				edit_gshadow_file(username,changes) == -1 || */
+				edit_shdow_file(username,NULL,CH_USRNAME, changes) == -1 || 
+				edit_subuid_file(username,changes) == -1 || 
+				edit_subgid_file(username,changes) == -1 || 
+				edit_gshadow_file(username,changes) == -1 || 
 				edit_group_file(username,changes) == -1) { 
 				if(unlock_files() == -1)
 					fprintf(stderr,"can't unlock the files.\n");
@@ -362,6 +369,22 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 				fprintf(stderr,"can't unlock the files.\n");
 				return -1;
 			}	
+
+			/*create the new home path*/
+			size_t hm_l = strlen(hm);
+			size_t changes_l = strlen(changes);
+			size_t len = hm_l + changes_l + 2;
+			char nw_hm[len];
+			memset(nw_hm,0,len);
+
+			strncpy(nw_hm,hm,hm_l);
+			strncat(nw_hm,"/",2);
+			strncat(nw_hm,changes,changes_l);
+
+			/*change home direcotry name */
+			if(rename(ui.dir,nw_hm) != 0)
+				return EUSRNAME;
+			
 		}
 
 		break;
@@ -3198,7 +3221,7 @@ static int edit_shdow_file(char *username, char *hash, int operation, char *chan
 	if(operation == CH_PWD && !hash) return -1;
 	if(operation == CH_USRNAME && !changes) return -1;
 
-	FILE *fp = fopen(SHADOW, "w");
+	FILE *fp = fopen(SHADOW, "r");
 	if(!fp){
 		fprintf(stderr,"can't open '%s' file.\n",SHADOW);
 		return -1;
@@ -3266,22 +3289,19 @@ static int edit_shdow_file(char *username, char *hash, int operation, char *chan
 			}
 			case CH_USRNAME:
 			{
-				size_t second_str_l = strlen(cpy_line);
-				char second_str[second_str_l];
-				memset(second_str,0,second_str_l);
-				strncpy(second_str,cpy_line,second_str_l+1);
+				size_t old_usrname_l = strlen(t);
+				size_t new_usrname_l = strlen(changes);
+				size_t last_str_l = strlen(&cpy_line[old_usrname_l+1]);
 
 				/* the + 2 accounts for one '\0' and one ':'*/
-				size_t total_l = strlen(changes) + second_str_l + 2;
-				char new_line[total_l];
-				if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
-					fprintf(stderr,"snprintf() failed, %s:%d.\n",__FILE__,__LINE__-1);
-					fclose(fp);
-					fclose(tmp);
-					if(remove(temp) != 0) 
-						fprintf(stderr,"can't delete '%s'\n", temp);
-					return -1;
-				}
+				size_t new_line_l = new_usrname_l + last_str_l + 2;
+				char new_line[new_line_l];
+				memset(new_line,0,new_line_l);
+
+				strncpy(new_line,changes,new_usrname_l);
+				new_line[new_usrname_l] = ':';
+				strncat(new_line,&cpy_line[old_usrname_l+1],last_str_l);
+
 
 				fputs(new_line,tmp);
 				memset(line,0,columns);
@@ -3314,9 +3334,9 @@ static int edit_shdow_file(char *username, char *hash, int operation, char *chan
 
 static int edit_passwd_file(char *username, char *changes, int field)
 {
-	FILE *fp = fopen(PASSWD_T,"r");
+	FILE *fp = fopen(PASSWD,"r");
 	if(!fp){
-		fprintf(stderr,"can't open '%s'.\n",PASSWD_T);
+		fprintf(stderr,"can't open '%s'.\n",PASSWD);
 		return -1;
 	}
 	
@@ -3486,12 +3506,12 @@ static int edit_passwd_file(char *username, char *changes, int field)
 	fclose(tmp);
 	fclose(fp);
 
-	if(remove(PASSWD_T) != 0) {
+	if(remove(PASSWD) != 0) {
 		fprintf(stderr,"can't delete %s", PASSWD);
 		return -1;
 	}
 
-	if(rename(temp,PASSWD_T) != 0) {
+	if(rename(temp,PASSWD) != 0) {
 		fprintf(stderr,"can't rename %s", temp);
 		return -1;
 	}
@@ -3501,9 +3521,9 @@ static int edit_passwd_file(char *username, char *changes, int field)
 }
 static int edit_group_file(char *groupname, char *changes)
 {
-	FILE *fp = fopen(GP_T,"r");
+	FILE *fp = fopen(GP,"r");
 	if(!fp){
-		fprintf(stderr,"can't open '%s'.\n",GP_T);
+		fprintf(stderr,"can't open '%s'.\n",GP);
 		return -1;
 	}
 
@@ -3569,12 +3589,12 @@ static int edit_group_file(char *groupname, char *changes)
 	fclose(tmp);
 	fclose(fp);
 
-	if(remove(GP_T) != 0) {
-		fprintf(stderr,"can't delete %s", GP_T);
+	if(remove(GP) != 0) {
+		fprintf(stderr,"can't delete %s", GP);
 		return -1;
 	}
 
-	if(rename(temp,GP_T) != 0) {
+	if(rename(temp,GP) != 0) {
 		fprintf(stderr,"can't rename %s", temp);
 		return -1;
 	}
@@ -3583,9 +3603,9 @@ static int edit_group_file(char *groupname, char *changes)
 }
 static int edit_gshadow_file(char *username, char *changes)
 {
-	FILE *fp = fopen(G_SHADOW_T,"r");
+	FILE *fp = fopen(G_SHADOW,"r");
 	if(!fp){
-		fprintf(stderr,"can't open '%s'.\n",G_SHADOW_T);
+		fprintf(stderr,"can't open '%s'.\n",G_SHADOW);
 		return -1;
 	}
 	
@@ -3651,12 +3671,12 @@ static int edit_gshadow_file(char *username, char *changes)
 	fclose(tmp);
 	fclose(fp);
 
-	if(remove(G_SHADOW_T) != 0) {
-		fprintf(stderr,"can't delete %s", G_SHADOW_T);
+	if(remove(G_SHADOW) != 0) {
+		fprintf(stderr,"can't delete %s", G_SHADOW);
 		return -1;
 	}
 
-	if(rename(temp,G_SHADOW_T) != 0) {
+	if(rename(temp,G_SHADOW) != 0) {
 		fprintf(stderr,"can't rename %s", temp);
 		return -1;
 	}
@@ -3712,23 +3732,20 @@ static int edit_subgid_file(char *username, char *changes)
 			continue;	
 		}
 
-
-		size_t second_str_l = strlen(cpy_line);
-		char second_str[second_str_l];
-		memset(second_str,0,second_str_l);
-		strncpy(second_str,cpy_line,second_str_l+1);
+		size_t old_usrname_l = strlen(t);
+		size_t new_usrname_l = strlen(changes);
+		size_t last_str_l = strlen(&cpy_line[old_usrname_l+1]);
 
 		/* the + 2 accounts for one '\0' and one ':'*/
-		size_t total_l = strlen(changes) + second_str_l + 2;
-		char new_line[total_l];
-		if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
-			fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
-			fclose(fp);
-			fclose(tmp);
-			if(remove(temp) != 0) 
-				fprintf(stderr,"can't delete '%s'\n", temp);
-			return -1;
-		}
+		size_t new_line_l = new_usrname_l + last_str_l + 2;
+		char new_line[new_line_l];
+		memset(new_line,0,new_line_l);
+
+		strncpy(new_line,changes,new_usrname_l);
+		new_line[new_usrname_l] = ':';
+		strncat(new_line,&cpy_line[old_usrname_l+1],last_str_l);
+
+
 
 		fputs(new_line,tmp);
 		memset(line,0,columns);
@@ -3799,23 +3816,18 @@ static int edit_subuid_file(char *username, char *changes)
 			continue;	
 		}
 
-
-		size_t second_str_l = strlen(cpy_line);
-		char second_str[second_str_l];
-		memset(second_str,0,second_str_l);
-		strncpy(second_str,cpy_line,second_str_l+1);
+		size_t old_usrname_l = strlen(t);
+		size_t new_usrname_l = strlen(changes);
+		size_t last_str_l = strlen(&cpy_line[old_usrname_l+1]);
 
 		/* the + 2 accounts for one '\0' and one ':'*/
-		size_t total_l = strlen(changes) + second_str_l + 2;
-		char new_line[total_l];
-		if(snprintf(new_line,total_l,"%s:%s",changes,second_str) < 0){
-			fprintf(stderr,"snprintf() failed, %s:%d ",__FILE__,__LINE__-1);
-			fclose(fp);
-			fclose(tmp);
-			if(remove(temp) != 0) 
-				fprintf(stderr,"can't delete '%s'\n", temp);
-			return -1;
-		}
+		size_t new_line_l = new_usrname_l + last_str_l + 2;
+		char new_line[new_line_l];
+		memset(new_line,0,new_line_l);
+
+		strncpy(new_line,changes,new_usrname_l);
+		new_line[new_usrname_l] = ':';
+		strncat(new_line,&cpy_line[old_usrname_l+1],last_str_l);
 
 		fputs(new_line,tmp);
 		memset(line,0,columns);
@@ -3839,7 +3851,12 @@ static int edit_subuid_file(char *username, char *changes)
 
 }
 
-
+/*
+ * in some distro the file login.defs
+ * does not contain all the parameters needed to add an user. 
+ * this function check the sys_param struct and if critical parameters are 0
+ * they are set to the default parameters
+ * */
 static void check_sys_param(struct sys_param *param)
 {
 	if((*param).UID_MAX == 0)
@@ -3848,6 +3865,8 @@ static void check_sys_param(struct sys_param *param)
 		(*param).SUB_UID_MIN = SUB_UID_MIN;
 	if((*param).SUB_UID_MAX == 0)
 		(*param).SUB_UID_MAX = SUB_UID_MAX;
+	if((*param).SUB_UID_COUNT == 0)
+		(*param).SUB_UID_COUNT = SUB_GID_COUNT;
 	if((*param).GID_MAX == 0)
 		(*param).GID_MAX = GID_MAX;
 	if((*param).SUB_GID_MIN == 0)

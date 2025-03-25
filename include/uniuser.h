@@ -35,6 +35,9 @@
 #define PASSWD_T "/etc/passwd.test"
 #define GP_T "/etc/group.test"
 #define G_SHADOW_T "/etc/gshadow.test"
+#define SUB_GID_T "/etc/subgid.test"
+#define	SUB_UID_T "/etc/subuid.test"
+#define SHADOW_T "/etc/shadow.test"
 
 
 /* used for randomization in password hashing*/
@@ -82,6 +85,7 @@
 #define EROOT 22 /*try to change or delete ROOT*/
 #define EGECOS 23 /*edit user  GECOS faield*/
 #define EUSRNAME 24 /*edit user's username failed*/
+#define EUSRSAME 25 /*you are trying to change the username to the same username*/
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/
