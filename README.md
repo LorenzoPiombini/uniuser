@@ -107,14 +107,17 @@ Both `uniuser.so` and `userctl` will be asan lib free.
 
 
 ```plain text
-$ sudo ./test <username>  			/*add user <username>*/
-$ sudo ./test -eu <username> -p <password> 	/*add a password <password> to <username>*/
-$ sudo ./test -du <username>  			/*delete user  <username>*/
-$ sudo ./test -g <groupname>  			/*create a group called <groupname> */
-$ sudo ./test -eg <groupname> -u <username>  	/*assign <groupname> to user <username>*/
-$ sudo ./test -deg <groupname> -u <username>  	/*remove <groupname> from user <username>*/
-
-
+$ sudo ./test <username>  				/*add user <username>*/
+$ sudo ./test -u <username> -p <password>   		/*add user <username> with password <password>*/
+$ sudo ./test -u <username> -p <password> -G "gecos"	/*add user <username> with password <password> and gecos <gecos>*/
+$ sudo ./test -u <username> -G "gecos"			/*add user <username> and gecos <gecos>*/
+$ sudo ./test -eu <username> -G "gecos"			/*edit the gecos for te user <username>*/
+$ sudo ./test -eu <username> -p <password> 		/*add a password <password> to <username> or change password for user <username>*/
+$ sudo ./test -du <username>  				/*delete user  <username>*/
+$ sudo ./test -g <groupname>  				/*create a group called <groupname> */
+$ sudo ./test -dg <groupname>  				/*delete group  <groupname>*/
+$ sudo ./test -eg <groupname> -u <username>  		/*assign <groupname> to user <username>*/
+$ sudo ./test -deg <groupname> -u <username>  		/*remove <groupname> from user <username>*/
 
 ```
 
