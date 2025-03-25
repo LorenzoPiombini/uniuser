@@ -105,14 +105,14 @@ Both `uniuser.so` and `userctl` will be asan lib free.
 ---
 ## FULL LIST COMMAND-LINE TOOL OPTIONS
 
-# (if you build with `sudo make build_prod`, program will be called userctl)
 
 ```plain text
-$ sudo ./test <username>  /*add user <username>*/
-$ sudo ./test -eu <username> -p <password> /*add a password <password> to <username>*/
-$ sudo ./test -du <username>  /*delete user  <username>*/
-$ sudo ./test -g <groupname>  /*create a group called <groupname> */
-$ sudo ./test -eg <groupname> -u <username>  /*assign <groupname> to user <username>*/
+$ sudo ./test <username>  			/*add user <username>*/
+$ sudo ./test -eu <username> -p <password> 	/*add a password <password> to <username>*/
+$ sudo ./test -du <username>  			/*delete user  <username>*/
+$ sudo ./test -g <groupname>  			/*create a group called <groupname> */
+$ sudo ./test -eg <groupname> -u <username>  	/*assign <groupname> to user <username>*/
+$ sudo ./test -deg <groupname> -u <username>  	/*remove <groupname> from user <username>*/
 
 
 
