@@ -72,7 +72,7 @@ $(TARGETt):$(OBJ)
 	fi
 
 obj/%.o:src/%.c
-	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIC -fsanitize=address
+	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC -fsanitize=address
 
 $(TARGET):$(OBJ_PROD)
 	@if [ "@HAVE_LIBSTROP@" = "1" ]; then\
