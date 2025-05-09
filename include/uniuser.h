@@ -156,6 +156,8 @@ struct user_info{
 #define ADD_GROUP_TO_USER 58    /*0010 1010*/  /* flag -g <groupname> -u <username>*/
 #define DEL_GROUP 138		/*1000 1010*/  /* flag -dg <groupname> */
 #define USER_AND_PSWD 43	/*0010 1011*/  /* falg -u <username> -p <password>*/
+#define USER_AND_GECOS 36	/*0010 0100*/  /* falg -u <username> -G <gecos>*/
+#define USER_AND_PSWD_AND_GECOS  47 /*0010 1111*/  /* falg -u <username> -p <password> -G <gecos>	*/
 #define DEL_GROUP_FROM_USER 186	/*1011 1010*/  /*flag -ed -u <username> -g <groupname>*/
 #define EDIT_PASWD 59		/*0011 1011*/ /*flag -eu <username> -p <password> */
 #define EDIT_GECOS 52		/*0011 0100*/ /*flag -eu <username> -G <gecos>*/
