@@ -59,8 +59,7 @@ int main(int argc, char** argv)
 		ret = add_user(username,NULL,NULL);
 		switch(ret) {
 		case EMAX_U:  
-			fprintf(stderr,"(%s): exceeded the maximum user number.\n\
-					(%s): user '%s' not added.\n",Prog,Prog,username);
+			fprintf(stderr,"(%s): exceeded the maximum user number.\n(%s): user '%s' not added.\n",Prog,Prog,username);
 			return -1;
 		case EALRDY_U: 
 			fprintf(stderr,"(%s): user '%s' already exist.\n",Prog,username);

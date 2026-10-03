@@ -41,7 +41,7 @@
 /* local function prototype */
 static int get_sys_param(struct sys_param *param);
 static int last_UID(char* file_name);
-static unsigned char user_already_exist(char *username);
+static int user_already_exist(char *username);
 static int group_exist(char *group_name);
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param);
 static unsigned int gen_SUB_UID(int uid, struct sys_param *param);
@@ -1177,11 +1177,10 @@ static int get_sys_param(struct sys_param *param)
 	 *		ENCRYPT_METHOD
 	 * */
 
+	errno = 0;
 	FILE* fp = fopen(SYS_PARAM,"r");
-	if(!fp)
-	{
-		if(errno == ENOENT)
-			return ENOENT;
+	if(!fp){
+		if(errno == ENOENT)return ENOENT;
 
 		printf("can't open the file");
 		return EXIT_FAILURE;
@@ -1198,7 +1197,7 @@ static int get_sys_param(struct sys_param *param)
 	char *endptr;
 	while(fgets(buffer,file_column,fp))
 	{
-		if(buffer[0] == '#') {
+		if(buffer[0] == '#' || buffer[0] == '\n') {
 			memset(buffer,0,file_column);
 			continue;
 		}
@@ -1226,7 +1225,7 @@ static int get_sys_param(struct sys_param *param)
 					(*param).PASS_MIN_DAYS = num;
 					memset(buffer,0,file_column);
 					continue;
-				}else {
+				}else{
 					status = EXIT_FAILURE;
 					goto clean_on_exit;
 				}	
@@ -1247,6 +1246,11 @@ static int get_sys_param(struct sys_param *param)
 				}	
 			}
 
+		}
+
+		if(strstr(buffer,"SYS_UID_MAX")){
+			memset(buffer,0,file_column);
+			continue;
 		}
 
 		if(strstr(buffer,"UID_MAX")) {
@@ -1355,6 +1359,10 @@ static int get_sys_param(struct sys_param *param)
 			}
 
 		}
+		if(strstr(buffer,"SYS_GID_MAX")){
+			memset(buffer,0,file_column);
+			continue;
+		}
 
 		if(strstr(buffer,"GID_MAX")) {
 			if(sscanf(buffer,"%s %s",key,value) == 2){
@@ -1368,7 +1376,6 @@ static int get_sys_param(struct sys_param *param)
 					goto clean_on_exit;
 				}	
 			}
-
 		}
 
 		if(strstr(buffer,"ENCRYPT_METHOD")) {
@@ -1585,7 +1592,7 @@ static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 
 }
 
-static unsigned char user_already_exist(char *username)
+static int user_already_exist(char *username)
 {
 	FILE *fp = fopen(PASSWD,"r");
 	if(!fp) {
@@ -1593,31 +1600,23 @@ static unsigned char user_already_exist(char *username)
 		return 0;
 	}
 
-	int columns = 500;
-	char line[columns];
-	memset(line,0,columns);
-
-	while(fgets(line,columns,fp)) {
-		if(strstr(line,username) != NULL){
-			char *t = strtok(line,":");
-			if(!t){
-				fprintf(stderr,"strtok() failed %s:%d",__FILE__,__LINE__);
-				fclose(fp);
-				return -1;
-			}
-			if(strlen(username) == strlen(t)){
-				if(strncmp(username,t,strlen(t)) == 0){
-					fclose(fp);
-					return 1;
-				}
-			}
-		}
-
-		memset(line,0,columns);
-	}
+	fseek(fp,0,SEEK_END);
+	long size = (long)ftell(fp);
+	rewind(fp);
+	
+	char buf[size+1];
+	memset(buf,0,size+1);
+	
+	if(fread(buf,size,1,fp) == -1) goto end;
 
 	fclose(fp);
+	fp = NULL;
+		
+	if(strstr(buf,username)) return 1;
 	return 0;
+end:
+	if(fp) fclose(fp); 
+	return -1;
 }
 
 
@@ -2341,15 +2340,13 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
         fp_mozzilla = fopen(mozzilla_pth,"r");
         if(!fp_mozzilla) {
 		    fprintf(stderr,"can't open %s.\n",mozzilla_pth);
-		    status = err;
-		    goto clean_on_exit;
+		    /*might not be an error*/
         }
 
         fp_hm_mozzilla = fopen(hm_mozzilla_pth,"w");
         if(!fp_hm_mozzilla) {
 		    fprintf(stderr,"can't open %s.\n",hm_mozzilla_pth);
-		    status = err;
-		    goto clean_on_exit;
+			/*myght not be an error*/
         }
 
     	if(cpy_file(fp_mozzilla,fp_hm_mozzilla) == -1) {
