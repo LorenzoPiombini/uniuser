@@ -1380,43 +1380,66 @@ static int last_UID(char* file_name)
 		return EXIT_FAILURE;
 	}
 
+	if(fseek(fp,0,SEEK_END) == -1){
+		fclose(fp);
+		return -1;
+	}
+	int size = ftell(fp);
+	rewind(fp);
+	char b[size+1];
+	memset(b,0,size+1);
+
+	if(fread(b,size,1,fp) == -1){
+		fclose(fp);
+		return -1;
+	}
+
 	int columns = 500;
 	char line[columns];
 	memset(line,0,columns);
-	int max = 0;
-    int uid = 0;
-	while(fgets(line,columns,fp)) {
+
+	char *p = b;
+	int max = 0, uid = 0, remaining = size;
+	while(remaining > 0){
+		char *end = memchr(p,'\n',remaining);
+		if(!end)break;
+		
+		size_t len = end - p;
+		strncpy(line,p,len);
+
 		strtok(line,":");
 		strtok(NULL,":");
-        char *t = strtok(NULL,":");
-        if(!t)
-            continue;
+		char *t = strtok(NULL,":");
+		if(!t) continue;
 
 		char *endptr;
 		uid = (int) strtol(t,&endptr,10);
 		if(*endptr == '\0') {
 			if(uid > UID_MAX) {
 				memset(line,0,columns);
+				len++;
+				p += len;
+				remaining -= len;
 			       	continue;
 			}
 
-			if(uid > max)
-				max = uid;
+			if(uid > max) max = uid;
 
-			memset(line,0,columns);
 		} else {
 			printf("strtol failed. %s:%d.\n",__FILE__,__LINE__-8);
-			fclose(fp);
 			return EXIT_FAILURE;
 		}
+		len++;
+		p += len;
+		remaining -= len;
+		memset(line,0,columns);
 	}
 	
-	fclose(fp);
-    if(max < 1000) {
-        return 999 ; /*the last uid if there is no regular user but only root*/
-    }
+	if(max < 1000) {
+		return 999 ; /*the last uid if there is no regular user but only root*/
+	}
 
-	return max; /*the last UID*/
+ 	return max; /*the last UID*/
 }
 
 static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
@@ -1437,11 +1460,30 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 		return -1;
 	}
 
+	if(fseek(fp,0,SEEK_END) == -1){
+		fclose(fp);
+		return -1;
+	}
+	int size = ftell(fp);
+	rewind(fp);
+
+	char buffer[size+1];
+	memset(buffer,0,size+1);
+
+	if(fread(buffer,size,1,fp) == -1){
+		fclose(fp);
+		return -1;
+	}
+
+	fclose(fp);
+	fp = NULL;
+
 	/*if the user has REUSE=yes we need to compute the SUB_UID differently*/
 	if(get_conf(REUSE) == REUSE_UID_GID){
 		int columns = 500;
 		char line[columns];
 		memset(line,0,columns);
+		/*TODO*/
 		while(fgets(line,columns,fp)){
 			strtok(line,":");
 			char* endptr;
