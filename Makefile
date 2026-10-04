@@ -1,0 +1,99 @@
+TARGETt := test
+TARGET = /bin/userctl
+SRC = $(wildcard src/*.c)
+OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
+OBJ_PROD = $(patsubst src/%.c, obj/%_prod.o, $(SRC))
+OBJlibuser = obj/uniuser.o
+OBJlibuserPR = obj/uniuser_prod.o
+
+LIBNAMEuser = uniuser
+LIBDIR = /usr/local/lib
+INCLUDEDIR = /usr/local/include
+SHAREDLIBuser = lib$(LIBNAMEuser).so
+
+default: mv-config.h $(TARGETt) fileRule
+
+prod:$(TARGET)
+
+conf:
+	@if [ ! -d /etc/uniuser ]; then\
+		echo "creating uniuser directory..." ;\
+		sudo mkdir /etc/uniuser ;\
+	fi
+fileRule: conf
+	@if [ ! -f /etc/uniuser/uniuser.conf ]; then\
+		echo "# /etc/uniuser/uniuser.conf - Configuration control definitions for the uniuser package." > /etc/uniuser/uniuser.conf ;\
+		echo "# line with '#' are comment, white lines are ignored" >>  /etc/uniuser/uniuser.conf ;\
+		echo "#" >> /etc/uniuser/uniuser.conf ;\
+		echo "# the rule REUSE=no is the default mode." >> /etc/uniuser/uniuser.conf ;\
+		echo "# change it to REUSE=yes" >> /etc/uniuser/uniuser.conf ;\
+		echo "# if you want uniuser to reuse deleted UIDs and GIDs" >> /etc/uniuser/uniuser.conf ;\
+		echo "#" >> /etc/uniuser/uniuser.conf ;\
+		echo "" >> /etc/uniuser/uniuser.conf ;\
+		echo "REUSE=no" >> /etc/uniuser/uniuser.conf ;\
+	fi
+clean:
+	sudo rm -r obj/*.o
+	rm *$(TARGET)*
+	rm -f $(INCLUDEDIR)/uniuser.h
+	rm -f $(LIBDIR)/$(LIBNAMEuser)
+	rm -f config.log
+	rm -f config.status
+	sudo rm -f $(SHAREDLIBuser) 
+
+object-dir:
+	@if [ ! -d ./obj ]; then\
+		echo "creating obj directory..." ;\
+		mkdir obj ;\
+	fi
+
+check-linker-path:                                                                                                
+	@if [ ! -f /etc/ld.so.conf.d/customtech.conf ]; then \
+        echo "setting linker configuration..." ;\
+        echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/customtech.conf >/dev/null ;\
+		sudo ldconfig;\
+	fi
+mv-config.h:
+	@if [ -f ./config.h ]; then\
+		mv config.h ./include ;\
+	fi
+
+library:
+	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
+		
+libraryPR:
+	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuserPR)
+
+$(TARGETt):$(OBJ)
+	@if [ "0" = "1" ]; then\
+		gcc -o $@ $? -lcrypt -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack ;\
+	else\
+		gcc -o $@ $? -lcrypt -fsanitize=address -pie -z relro -z now -z noexecstack ;\
+	fi
+
+obj/%.o:src/%.c
+	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC -fsanitize=address
+
+$(TARGET):$(OBJ_PROD)
+	@if [ "0" = "1" ]; then\
+		gcc -o $@ $? -lcrypt -lstrOP -pie -z relro -z now -z noexecstack ;\
+	else\
+		gcc -o $@ $? -lcrypt  -pie -z relro -z now -z noexecstack ;\
+	fi
+
+obj/%_prod.o:src/%.c
+	gcc -Wall -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIC 
+
+
+
+install:
+	install -d $(INCLUDEDIR)
+	install -m 644 include/uniuser.h $(INCLUDEDIR)
+	install -m 755 $(SHAREDLIBuser) $(LIBDIR)
+	ldconfig
+
+build: fileRule mv-config.h object-dir default library check-linker-path install
+
+build_prod: fileRule mv-config.h object-dir prod libraryPR check-linker-path install
+
+.PHONY: install object-dir default library check-linker-path mv-config.h 
