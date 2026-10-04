@@ -1180,219 +1180,207 @@ static int get_sys_param(struct sys_param *param)
 	errno = 0;
 	FILE* fp = fopen(SYS_PARAM,"r");
 	if(!fp){
-		if(errno == ENOENT)return ENOENT;
-
 		printf("can't open the file");
+		if(errno == ENOENT)return ENOENT;
 		return EXIT_FAILURE;
 	}
-	
+		
+	if(fseek(fp,0,SEEK_END) == -1){
+		fclose(fp);
+		return -1;
+	}
+	int size = ftell(fp);
+	rewind(fp);
+
+	char buffer[size+1];
+	memset(buffer,0,size+1);
+
+	if(fread(buffer,size,1,fp) == -1){
+		fclose(fp);
+		return -1;
+	}
+
+	fclose(fp);
+	fp = NULL;
+
 	int status = EXIT_SUCCESS;
-	unsigned char file_column = 100;
-	char buffer[file_column];
 
-	char key[50];
-	char value [50];
+	char key[50] = {0};
+	char value [50] = {0};
 
-	memset(buffer,0,file_column);
-	char *endptr;
-	while(fgets(buffer,file_column,fp))
-	{
-		if(buffer[0] == '#' || buffer[0] == '\n') {
-			memset(buffer,0,file_column);
-			continue;
-		}
+	char *endptr, *tok = strtok(buffer,"\n");
+	while((tok = strtok(NULL,"\n"))) {
+		if(*tok == '#' || *tok == '\n') continue;
 
-		if(strstr(buffer,"PASS_MAX_DAYS")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"PASS_MAX_DAYS")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).PASS_MAX_DAYS = num;
-					memset(buffer,0,file_column);
 					memset(key,0,50);
 					memset(value,0,50);
 					continue;
 				}else {
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+						return -1;
 				}	
 			}
 		}
 
-		if(strstr(buffer,"PASS_MIN_DAYS")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"PASS_MIN_DAYS")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).PASS_MIN_DAYS = num;
-					memset(buffer,0,file_column);
 					continue;
 				}else{
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+						return -1;
 				}	
 			}
 
 		}
 
-		if(strstr(buffer,"PASS_WARN_AGE")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"PASS_WARN_AGE")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).PASS_WARN_AGE = num;
-					memset(buffer,0,file_column);
 					continue;
 				}else {
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+						return -1;
 				}	
 			}
 
 		}
 
-		if(strstr(buffer,"SYS_UID_MAX")){
-			memset(buffer,0,file_column);
+		if(strstr(tok,"SYS_UID_MAX")){
 			continue;
 		}
 
-		if(strstr(buffer,"UID_MAX")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"UID_MAX")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				if(strlen(key) == strlen("UID_MAX")) {
 					unsigned int num = (unsigned int)strtol(value,&endptr,10);
 					if(*endptr == '\0') {
 						(*param).UID_MAX = num;
-						memset(buffer,0,file_column);
 						continue;
 					}else {
 						status = EXIT_FAILURE;
-						goto clean_on_exit;
+						return -1;
 					}
 				}	
 			}
-
 		}
 
-		if(strstr(buffer,"SUB_UID_MIN")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"SUB_UID_MIN")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).SUB_UID_MIN = num;
-					memset(buffer,0,file_column);
 					continue;
 				}else {
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+					return -1;
 				}	
 			}
-
 		}
 
-		if(strstr(buffer,"SUB_UID_MAX")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"SUB_UID_MAX")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).SUB_UID_MAX = num;
-					memset(buffer,0,file_column);
 					continue;
 				}else {
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+					return -1;
 				}	
 			}
-
 		}
 
-		if(strstr(buffer,"SUB_UID_COUNT")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"SUB_UID_COUNT")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).SUB_UID_COUNT = num;
-					memset(buffer,0,file_column);
 					continue;
 				}else {
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+					return -1;
 				}	
 			}
-
 		}
 
-		if(strstr(buffer,"SUB_GID_MIN")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"SUB_GID_MIN")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).SUB_GID_MIN = num;
-					memset(buffer,0,file_column);
 					continue;
 				}else {
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+					return -1;
 				}	
 			}
 
 		}
 
-		if(strstr(buffer,"SUB_GID_MAX")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"SUB_GID_MAX")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).SUB_GID_MAX = num;
-					memset(buffer,0,file_column);
 					continue;
 				}else {
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+					return -1;
 				}	
 			}
-
 		}
 
-		if(strstr(buffer,"SUB_GID_COUNT")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"SUB_GID_COUNT")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).SUB_GID_COUNT = num;
-					memset(buffer,0,file_column);
 					continue;
 				}else {
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+					return -1;
 				}	
 			}
-
 		}
-		if(strstr(buffer,"SYS_GID_MAX")){
-			memset(buffer,0,file_column);
+
+		if(strstr(tok,"SYS_GID_MAX")){
 			continue;
 		}
 
-		if(strstr(buffer,"GID_MAX")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"GID_MAX")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				unsigned int num = (unsigned int)strtol(value,&endptr,10);
 				if(*endptr == '\0') {
 					(*param).GID_MAX = num;
-					memset(buffer,0,file_column);
 					continue;
 				}else {
 					status = EXIT_FAILURE;
-					goto clean_on_exit;
+					return -1;
 				}	
 			}
 		}
 
-		if(strstr(buffer,"ENCRYPT_METHOD")) {
-			if(sscanf(buffer,"%s %s",key,value) == 2){
+		if(strstr(tok,"ENCRYPT_METHOD")) {
+			if(sscanf(tok,"%s %s",key,value) == 2){
 				size_t l = strlen(value) +1;
 				strncpy((*param).ENCRYPT_METHOD,value,l);
-				memset(buffer,0,file_column);
 				continue;
 			}
 		}
 		
 	}
 	
-clean_on_exit:
-	fclose(fp);
-
-	return status;	
+	return 0;	
 
 }
 
@@ -2347,29 +2335,28 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
         if(!fp_hm_mozzilla) {
 		    fprintf(stderr,"can't open %s.\n",hm_mozzilla_pth);
 			/*myght not be an error*/
-        }
+        }else{
 
-    	if(cpy_file(fp_mozzilla,fp_hm_mozzilla) == -1) {
-    		fprintf(stderr,
-	    			"copy file %s failed.\n",
-		    		mozzilla_pth);
-		    status = err;
-		    goto clean_on_exit;
-	    }
+		if(cpy_file(fp_mozzilla,fp_hm_mozzilla) == -1) {
+			fprintf(stderr,
+					"copy file %s failed.\n",
+					mozzilla_pth);
+			status = err;
+		}
 
-        if(chown(hm_mozzilla_pth,uid,uid) != 0) {
-            fprintf(stderr,
-                    "can't change %s ownership.\n",hm_mozzilla_pth);
-		    status = err;
-	    	goto clean_on_exit;
-        }
+		if(chown(hm_mozzilla_pth,uid,uid) != 0) {
+			fprintf(stderr,
+					"can't change %s ownership.\n",hm_mozzilla_pth);
+			status = err;
+		}
+	}
 
     } else {
 
-    	if(snprintf(profile_pth,profile_pth_l,
-				"%s/%s",SKEL,U_PROFILE) < 0) {
-	    	fprintf(stderr,
-				"snprintf() failed, %s:%d.\n",
+	    if(snprintf(profile_pth,profile_pth_l,
+				    "%s/%s",SKEL,U_PROFILE) < 0) {
+		    fprintf(stderr,
+				    "snprintf() failed, %s:%d.\n",
 				__FILE__,__LINE__-2);
 		    return -1;
 	    }
