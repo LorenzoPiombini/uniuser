@@ -1203,7 +1203,6 @@ static int get_sys_param(struct sys_param *param)
 	fclose(fp);
 	fp = NULL;
 
-	int status = EXIT_SUCCESS;
 
 	char key[50] = {0};
 	char value [50] = {0};
@@ -1221,8 +1220,7 @@ static int get_sys_param(struct sys_param *param)
 					memset(value,0,50);
 					continue;
 				}else {
-					status = EXIT_FAILURE;
-						return -1;
+					return -1;
 				}	
 			}
 		}
@@ -1234,7 +1232,6 @@ static int get_sys_param(struct sys_param *param)
 					(*param).PASS_MIN_DAYS = num;
 					continue;
 				}else{
-					status = EXIT_FAILURE;
 						return -1;
 				}	
 			}
@@ -1248,7 +1245,6 @@ static int get_sys_param(struct sys_param *param)
 					(*param).PASS_WARN_AGE = num;
 					continue;
 				}else {
-					status = EXIT_FAILURE;
 						return -1;
 				}	
 			}
@@ -1267,7 +1263,6 @@ static int get_sys_param(struct sys_param *param)
 						(*param).UID_MAX = num;
 						continue;
 					}else {
-						status = EXIT_FAILURE;
 						return -1;
 					}
 				}	
@@ -1281,7 +1276,6 @@ static int get_sys_param(struct sys_param *param)
 					(*param).SUB_UID_MIN = num;
 					continue;
 				}else {
-					status = EXIT_FAILURE;
 					return -1;
 				}	
 			}
@@ -1294,7 +1288,6 @@ static int get_sys_param(struct sys_param *param)
 					(*param).SUB_UID_MAX = num;
 					continue;
 				}else {
-					status = EXIT_FAILURE;
 					return -1;
 				}	
 			}
@@ -1307,7 +1300,6 @@ static int get_sys_param(struct sys_param *param)
 					(*param).SUB_UID_COUNT = num;
 					continue;
 				}else {
-					status = EXIT_FAILURE;
 					return -1;
 				}	
 			}
@@ -1320,7 +1312,6 @@ static int get_sys_param(struct sys_param *param)
 					(*param).SUB_GID_MIN = num;
 					continue;
 				}else {
-					status = EXIT_FAILURE;
 					return -1;
 				}	
 			}
@@ -1334,7 +1325,6 @@ static int get_sys_param(struct sys_param *param)
 					(*param).SUB_GID_MAX = num;
 					continue;
 				}else {
-					status = EXIT_FAILURE;
 					return -1;
 				}	
 			}
@@ -1347,7 +1337,6 @@ static int get_sys_param(struct sys_param *param)
 					(*param).SUB_GID_COUNT = num;
 					continue;
 				}else {
-					status = EXIT_FAILURE;
 					return -1;
 				}	
 			}
@@ -1364,7 +1353,6 @@ static int get_sys_param(struct sys_param *param)
 					(*param).GID_MAX = num;
 					continue;
 				}else {
-					status = EXIT_FAILURE;
 					return -1;
 				}	
 			}
@@ -2240,30 +2228,27 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 	FILE *fp_hm_bashrc = NULL;
 	FILE *fp_bash_lgo = NULL;
 	FILE *fp_hm_bash_lgo = NULL;
-	FILE *fp_mozzilla = NULL;
-	FILE *fp_hm_mozzilla = NULL;
 	size_t hm_profile_pth_l = 0; 
 	size_t hm_bashrc_path_l = 0; 
 	size_t hm_bash_lgo_path_l = 0;
-	size_t hm_mozzilla_pth_l = 0; 
 	size_t profile_pth_l = 0;
-	size_t mozzilla_pth_l = 0;
 	int status = 0;
 	int err = -1;
 
+	char *prof = NULL;
 	int distro = get_linux_distro();
     
 	if(distro == -1) {
 		fprintf(stderr, "can't read %s.\n",DISTRO);
 		return - 1;
 	} else if(distro == DEB) {
-	    hm_profile_pth_l = strlen(U_PROFILE) + home_path_length + 2;
-	    profile_pth_l = strlen(U_PROFILE) + strlen(SKEL) + 2;
+		prof = U_PROFILE;
+		hm_profile_pth_l = strlen(U_PROFILE) + home_path_length + 2;
+		profile_pth_l = strlen(U_PROFILE) + strlen(SKEL) + 2;
 	} else if(distro == RHEL) {
+		prof = FC_PROFILE;
 		hm_profile_pth_l = strlen(FC_PROFILE) + home_path_length + 2;
-		hm_mozzilla_pth_l = strlen(FC_MOZZILA) + home_path_length + 2;
 		profile_pth_l = strlen(FC_PROFILE) + strlen(SKEL) + 2;
-		mozzilla_pth_l = strlen(FC_MOZZILA) +strlen(SKEL) +2;
 	}
 
 	hm_bashrc_path_l = strlen(BASH_RC) + home_path_length + 2;
@@ -2287,74 +2272,8 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 	memset(hm_bashrc_pth,0,hm_bashrc_path_l);
 	memset(hm_bash_lgo_pth,0,hm_bash_lgo_path_l);
 
-    if(mozzilla_pth_l > 0) {
-        char hm_mozzilla_pth[hm_mozzilla_pth_l];
-        char mozzilla_pth[mozzilla_pth_l];
-        memset(mozzilla_pth,0,mozzilla_pth_l);
-        memset(hm_mozzilla_pth,0,hm_mozzilla_pth_l);
 
-        if(snprintf(mozzilla_pth,mozzilla_pth_l,
-                    "%s/%s",SKEL,FC_MOZZILA) < 0) {
-		    fprintf(stderr,
-				"snprintf() failed, %s:%d.\n",
-				__FILE__,__LINE__-2);
-	    	return -1;
-        }
-    
-        if(snprintf(hm_mozzilla_pth,hm_mozzilla_pth_l,
-                    "%s/%s",home_path,FC_MOZZILA) < 0) {
-		    fprintf(stderr,
-				"snprintf() failed, %s:%d.\n",
-				__FILE__,__LINE__-2);
-	    	return -1;
-        }
-
-    	if(snprintf(profile_pth,profile_pth_l,
-	    			"%s/%s",SKEL,FC_PROFILE) < 0) {
-	    	fprintf(stderr,
-				"snprintf() failed, %s:%d.\n",
-				__FILE__,__LINE__-2);
-	    	return -1;
-	    }
-
-    	if(snprintf(hm_profile_pth,hm_profile_pth_l,
-	    			"%s/%s",home_path,FC_PROFILE) < 0) {
-	    	fprintf(stderr,
-				"snprintf() failed, %s:%d.\n",
-				__FILE__,__LINE__-2);
-	    	return -1;
-	    }
-
-        fp_mozzilla = fopen(mozzilla_pth,"r");
-        if(!fp_mozzilla) {
-		    fprintf(stderr,"can't open %s.\n",mozzilla_pth);
-		    /*might not be an error*/
-        }
-
-        fp_hm_mozzilla = fopen(hm_mozzilla_pth,"w");
-        if(!fp_hm_mozzilla) {
-		    fprintf(stderr,"can't open %s.\n",hm_mozzilla_pth);
-			/*myght not be an error*/
-        }else{
-
-		if(cpy_file(fp_mozzilla,fp_hm_mozzilla) == -1) {
-			fprintf(stderr,
-					"copy file %s failed.\n",
-					mozzilla_pth);
-			status = err;
-		}
-
-		if(chown(hm_mozzilla_pth,uid,uid) != 0) {
-			fprintf(stderr,
-					"can't change %s ownership.\n",hm_mozzilla_pth);
-			status = err;
-		}
-	}
-
-    } else {
-
-	    if(snprintf(profile_pth,profile_pth_l,
-				    "%s/%s",SKEL,U_PROFILE) < 0) {
+	    if(snprintf(profile_pth,profile_pth_l,"%s/%s",SKEL,prof) < 0) {
 		    fprintf(stderr,
 				    "snprintf() failed, %s:%d.\n",
 				__FILE__,__LINE__-2);
@@ -2362,14 +2281,13 @@ static int cpy_skel(char *home_path, int home_path_length, int uid)
 	    }
 
 	    if(snprintf(hm_profile_pth,hm_profile_pth_l,
-				"%s/%s",home_path,U_PROFILE) < 0) {
+				"%s/%s",home_path,prof) < 0) {
 	    	fprintf(stderr,
 				"snprintf() failed, %s:%d.\n",
 				__FILE__,__LINE__-2);
 		    return -1;
 	    }
 
-    }
 
 	if(snprintf(bashrc_pth,bashrc_pth_l,
 				"%s/%s",SKEL,BASH_RC) < 0) {
@@ -2495,9 +2413,6 @@ clean_on_exit:
     }
 	if(fp_hm_bash_lgo) {
         fclose(fp_hm_bash_lgo);
-    }
-    if(fp_hm_mozzilla) {
-        fclose(fp_hm_mozzilla);
     }
 
 
