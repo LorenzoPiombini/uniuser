@@ -11,7 +11,7 @@ LIBDIR = /usr/local/lib
 INCLUDEDIR = /usr/local/include
 SHAREDLIBuser = lib$(LIBNAMEuser).so
 
-default: mv-config.h $(TARGETt) fileRule
+default: $(TARGETt) fileRule
 
 prod:$(TARGET)
 
@@ -53,10 +53,6 @@ check-linker-path:
         echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/customtech.conf >/dev/null ;\
 		sudo ldconfig;\
 	fi
-mv-config.h:
-	@if [ -f ./config.h ]; then\
-		mv config.h ./include ;\
-	fi
 
 library:
 	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuser)
@@ -65,24 +61,16 @@ libraryPR:
 	sudo gcc -Wall -fPIC -shared -o $(SHAREDLIBuser) $(OBJlibuserPR)
 
 $(TARGETt):$(OBJ)
-	@if [ "0" = "1" ]; then\
-		gcc -o $@ $? -lcrypt -lstrOP -fsanitize=address -pie -z relro -z now -z noexecstack ;\
-	else\
 		gcc -o $@ $? -lcrypt -fsanitize=address -pie -z relro -z now -z noexecstack ;\
-	fi
 
 obj/%.o:src/%.c
 	gcc -Wall -g3 -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC -fsanitize=address
 
 $(TARGET):$(OBJ_PROD)
-	@if [ "0" = "1" ]; then\
-		gcc -o $@ $? -lcrypt -lstrOP -pie -z relro -z now -z noexecstack ;\
-	else\
-		gcc -o $@ $? -lcrypt  -pie -z relro -z now -z noexecstack ;\
-	fi
+	gcc -o $@ $? -lcrypt  -pie -z relro -z now -z noexecstack ;\
 
 obj/%_prod.o:src/%.c
-	gcc -Wall -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTiFY_SOURCE=2 -fPIC 
+	gcc -Wall -c $< -o $@ -Iinclude -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fPIC 
 
 
 

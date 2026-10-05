@@ -1,9 +1,3 @@
-#include "config.h"
-
-#if HAVE_STR_OP_H
-#include "str_op.h"
-#endif /* HAVE_STR_OP_H*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,7 +19,9 @@
 #include <spawn.h>
 #include <sys/wait.h>
 #include "uniuser.h"
+
 /*
+ *
  *  modify this files to create a new user 
  *	etc/group
 	/etc/subgid
@@ -82,11 +78,7 @@ static int edit_subgid_file(char *username, char *changes);
 static int edit_gshadow_file(char *username, char *changes);
 static int edit_group_file(char *groupname, char *changes);
 static void check_sys_param(struct sys_param *param);
-
-#if !HAVE_LIBSTROP
 static size_t number_of_digit(int n);
-#endif /*HAVE_LIBSTROP*/
-
 
 /* default values if there's no SYS_PARAM file*/
 static const int UID_MAX = 60000;
@@ -100,6 +92,7 @@ static const int PASS_MAX_DAYS = 99999;
 static const int PASS_MIN_DAYS = 0;
 static const int PASS_WARN_AGE = 7;
 static const char *ENCRYPT_METHOD = "SHA512";
+
 
 /* constants */
 static const char *hm = "/home";
@@ -247,12 +240,19 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	 * you will have to use the utilities provided from your 
 	 * Linux Distro  
 	 * */
-	if(!username && !uid) return -1;
-	if(uid)
-		if(*uid == 0) return -1;
+	char *hash = NULL;
+	va_list args;
+	va_start(args,n_elem);
+	int err = -1;
 
-	if(username)
-		if(strncmp(username,ADMIN,strlen(ADMIN)) == 0) return -1;
+	if(!username && !uid) return -1;
+	if(uid) if(*uid == 0) return -1;
+	if(username) {
+		int r = 0;
+		if((r = user_already_exist(username)) == -1) goto end;
+		if(r == 0) return ENONE_U;
+		if(strncmp(username,ADMIN,strlen(ADMIN)) == 0) goto end;
+	}
 	
 	if(n_elem <= 0 ) return -1;
 
@@ -262,55 +262,48 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	}
 
 
-	va_list args;
-	va_start(args,n_elem);
-
+	
 	switch(element_to_change){
 	case CH_PWD:
 	{
-		if(!user_already_exist(username)) return ENONE_U;
 
-		if (n_elem > 1) return -1;
+		if (n_elem > 1) goto end;
 
 		/*change password*/
 		char *pswd = va_arg(args, char*);
 		if(pswd){
-			char *hash = NULL;
 			if(crypt_pswd(pswd,&hash,NULL) == -1) {
 				fprintf(stderr, "paswd encryption failed. %s:%d.\n",
 					__FILE__,__LINE__-1);
-				return -1;
+				goto end;
 			}
 			
 			/*lock files */
 			if((lock_file(SHADOW_LCK) == -1)) {
 				fprintf(stderr,"can't lock the file.\n");
-				free(hash);
-				return -1;
+				goto end;
 			}
 
 			
 			/* write the new passwd to file  */		
 			if(edit_shdow_file(username,hash,CH_PWD,NULL)){
 				printf("edit shadows files failed.\n");
-				free(hash);
-				return -1;
+				goto end;
 			}
 
 			free(hash);
+			hash = NULL;
 
 			if(unlock_file(SHADOW_LCK) == -1){
 				fprintf(stderr,"can't unlock the file.\n");
-				return -1;
+				goto end;
 			}	
 		}		
 		break;	
 	}
 	case CH_GECOS:
 	{
-		if(!user_already_exist(username)) return ENONE_U;
-
-		if (n_elem > 1) return -1;
+		if (n_elem > 1) goto end;
 
 		char *changes = va_arg(args,char*);
 		/*lock files */
@@ -320,35 +313,39 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 		}
 
 
-		if(edit_passwd_file(username,changes,CH_GECOS) == -1)
-			return EGECOS;	
+		if(edit_passwd_file(username,changes,CH_GECOS) == -1){
+			err = EGECOS;	
+			goto end;
+		}
 		
 
 		if(unlock_file(PASSWD_LCK) == -1){
 			fprintf(stderr,"can't unlock the file.\n");
-				return -1;
+			goto end;
 		}	
 		break;
 	}
 	case CH_USRNAME:
 	{
-		if(!user_already_exist(username)) return ENONE_U;
-
-		if (n_elem > 1) return -1;
+		if (n_elem > 1)goto end;
 		
 		char *changes = va_arg(args, char*);
 		if(changes){
-			if(strncmp(username,changes,strlen(changes)+1) == 0)
-				return EUSRSAME;
+			if(strncmp(username,changes,strlen(changes)+1) == 0){
+				err =EUSRSAME;
+				goto end;
+			}
 
 			struct user_info ui = {0};
-			if(get_user_info(username,&ui) == -1)
-				return EUSRNAME;
+			if(get_user_info(username,&ui) == -1){
+				err = EUSRNAME;
+			goto end;
+			}
 
 			/*lock files */
 			if(lock_files() == -1) { 
 				fprintf(stderr,"can't lock the file.\n");
-				return -1;
+				goto end;
 			}
 
 
@@ -358,16 +355,16 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 				edit_subgid_file(username,changes) == -1 || 
 				edit_gshadow_file(username,changes) == -1 || 
 				edit_group_file(username,changes) == -1) { 
-				if(unlock_files() == -1)
-					fprintf(stderr,"can't unlock the files.\n");
+				if(unlock_files() == -1) fprintf(stderr,"can't unlock the files.\n");
 
-				return EUSRNAME;
+				err = EUSRNAME;
+				goto end;
 			}
 
 
 			if(unlock_files() == -1){
 				fprintf(stderr,"can't unlock the files.\n");
-				return -1;
+				goto end;
 			}	
 
 			/*create the new home path*/
@@ -382,8 +379,10 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 			strncat(nw_hm,changes,changes_l);
 
 			/*change home direcotry name */
-			if(rename(ui.dir,nw_hm) != 0)
-				return EUSRNAME;
+			if(rename(ui.dir,nw_hm) != 0){
+				err = EUSRNAME;
+				goto end;
+			}
 			
 		}
 
@@ -391,9 +390,12 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	}
 	case (CH_GECOS | CH_PWD):
 	{
-		if(!user_already_exist(username)) return ENONE_U;
+		if(!user_already_exist(username)){ 
+			err =  ENONE_U;
+			goto end;
+		}
 
-		if (n_elem < 2 || n_elem > 2) return -1;
+		if (n_elem < 2 || n_elem > 2) goto end;
 
 		/*change password*/
 		char *pswd = va_arg(args, char*);
@@ -402,29 +404,27 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 			if(crypt_pswd(pswd,&hash,NULL) == -1) {
 				fprintf(stderr, "paswd encryption failed. %s:%d.\n",
 					__FILE__,__LINE__-1);
-				return -1;
+				goto end;
 			}
 			
 			/*lock files */
 			if((lock_file(SHADOW_LCK) == -1)) {
 				fprintf(stderr,"can't lock the file.\n");
-				free(hash);
-				return -1;
+				goto end;
 			}
 
 			
 			/* write the new passwd to file  */		
 			if(edit_shdow_file(username,hash,CH_PWD,NULL) == -1){
 				printf("edit shadows files failed.\n");
-				free(hash);
-				return -1;
+				goto end;
 			}
 
 			free(hash);
 
 			if(unlock_file(SHADOW_LCK) == -1){
 				fprintf(stderr,"can't unlock the file.\n");
-				return -1;
+				goto end;
 			}	
 		}		
 
@@ -433,17 +433,19 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 		/*lock files */
 		if((lock_file(PASSWD_LCK) == -1)) {
 			fprintf(stderr,"can't lock the file.\n");
-			return -1;
+			goto end;
 		}
 
 
-		if(edit_passwd_file(username,changes,CH_GECOS) == -1)
-			return EGECOS;	
+		if(edit_passwd_file(username,changes,CH_GECOS) == -1){
+			err = EGECOS;	
+			goto end;
+		}
 		
 
 		if(unlock_file(PASSWD_LCK) == -1){
 			fprintf(stderr,"can't unlock the file.\n");
-				return -1;
+			goto end;
 		}
 
 		break;
@@ -454,6 +456,10 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	}
 
 	return 0;
+end:
+	if(hash) free(hash);
+	va_end(args);
+	return err;
 }
 
 
@@ -1394,6 +1400,7 @@ static int last_UID(char* file_name)
 		return -1;
 	}
 
+	fclose(fp);
 	int columns = 500;
 	char line[columns];
 	memset(line,0,columns);
@@ -1480,11 +1487,14 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 
 	/*if the user has REUSE=yes we need to compute the SUB_UID differently*/
 	if(get_conf(REUSE) == REUSE_UID_GID){
-		int columns = 500;
-		char line[columns];
-		memset(line,0,columns);
-		/*TODO*/
-		while(fgets(line,columns,fp)){
+		char *p = buffer;
+		int remain = size;
+		while(remain > 0){
+			char *end = memchr(p,'\n',remain);
+			if(!end) break;
+			size_t len = end -p;
+			strncpy(line,p,len);
+
 			strtok(line,":");
 			char* endptr;
 			sub_gid = (unsigned int) strtol(strtok(NULL,":"),&endptr,10);
@@ -1492,16 +1502,15 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 				fprintf(stderr,"can't compute sub gid.\n");
 				return -1;
 			}
+			len++;
+			p += len;
+			remain -= len;
 		}
 
 		sub_gid += (*param).SUB_GID_COUNT;
-		if(sub_gid > (*param).SUB_GID_MAX)
-			sub_gid = ESGID;
+		if(sub_gid > (*param).SUB_GID_MAX) sub_gid = ESGID;
 
-		fclose(fp);
 		return sub_gid;
-
-
 	} 
 
 	/* get the username based on the uid*/
@@ -1511,10 +1520,19 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 		return -1;
 	}		
 
+	char *p = buffer;
+	int remaining = size;
+	while(remaining > 0) {
+		char *end = memchr(p,'\n',remaining);
+		if(!end) break;
+		size_t len = end - p;
+		strncpy(line,p,len);
 
-	while(fgets(line,columns,fp)) {
 		if(strstr(line,pw->pw_name) == NULL) {
 			memset(line,0,columns);
+			len++;
+			p += len;
+			remaining -= len;
 			continue;	
 		}
 		
@@ -1527,10 +1545,8 @@ static unsigned int gen_SUB_GID(int uid, struct sys_param *param)
 		}
 	}
 
-	if(sub_gid > (*param).SUB_GID_MAX)
-		sub_gid = ESGID;
+	if(sub_gid > (*param).SUB_GID_MAX) sub_gid = ESGID;
 
-	fclose(fp);
 	return sub_gid;
 }
 
@@ -1548,12 +1564,39 @@ static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 		return EXIT_FAILURE;
 	}
 
+	if(fseek(fp,0,SEEK_END) == -1){
+		fclose(fp);
+		return -1;
+	}
+	int size = ftell(fp);
+	rewind(fp);
+
+	char buffer[size+1];
+	memset(buffer,0,size+1);
+
+	if(fread(buffer,size,1,fp) == -1){
+		fclose(fp);
+		return -1;
+	}
+
+	fclose(fp);
+	fp = NULL;
+
+	int columns = 500;
+	char line[columns];
+	memset(line,0,columns);
+
+	int remain = size;
+	char *p = buffer;
 	/*if the user has REUSE=yes we need to compute the SUB_UID differently*/
 	if(get_conf(REUSE) == REUSE_UID_GID){
-		int columns = 500;
-		char line[columns];
-		memset(line,0,columns);
-		while(fgets(line,columns,fp)){
+		while(remain > 0){
+			char *end = memchr(p,'\n',remain);
+			if(!end) break;
+
+			size_t len = end - p;
+			strncpy(line,p,len);
+
 			strtok(line,":");
 			char* endptr;
 			sub_uid = (unsigned int) strtol(strtok(NULL,":"),&endptr,10);
@@ -1561,16 +1604,17 @@ static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 				fprintf(stderr,"can't compute sub uid.\n");
 				return -1;
 			}
+			len++;
+			p += len;
+			remain -= len;
+			memset(line,0,columns);
 		}
 
 		sub_uid += (*param).SUB_UID_COUNT;
 		if(sub_uid > (*param).SUB_UID_MAX)
 			sub_uid = ESUID;
 
-		fclose(fp);
 		return sub_uid;
-
-
 	} 
 
 	/* get the username based on the uid
@@ -1583,12 +1627,18 @@ static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 	}		
 
 
-	int columns = 500;
-	char line[columns];
-	memset(line,0,columns);
 
-	while(fgets(line,columns,fp)) {
+	while(remain > 0) {
+		char *end = memchr(p,'\n',remain);
+		if(!end) break;
+
+		size_t len = end - p;
+		strncpy(line,p,len);
+
 		if(strstr(line,pw->pw_name) == NULL) {
+			len++;
+			p += len;
+			remain -= len;
 			memset(line,0,columns);
 			continue;	
 		}
@@ -1600,18 +1650,20 @@ static unsigned int gen_SUB_UID(int uid, struct sys_param *param)
 			sub_uid += (*param).SUB_UID_COUNT;
 			break;
 		}
+		len++;
+		p += len;
+		remain -= len;
 	}
 
 	if(sub_uid > (*param).SUB_UID_MAX)
 		sub_uid = ESUID;
 
-	fclose(fp);
 	return sub_uid;
-
 }
 
 static int user_already_exist(char *username)
 {
+	if(!username) return -1;
 	FILE *fp = fopen(PASSWD,"r");
 	if(!fp) {
 		fprintf(stderr,"can't open %s.\n",GP);
@@ -1675,23 +1727,6 @@ int crypt_pswd(char *paswd, char **hash, char* salt)
 		data.input[i] = paswd[i];
 	}
 	
-	/*
-	 * gerating random byte it is not racommended,
-	 * the hash will always be different and login will fail
-	 * */
-
-	/*
-	char random_bytes[64];
-	memset(random_bytes,0,64);
-
-	if(!gen_random_bytes(random_bytes,64)) { 
-		fprintf(stderr,
-				"gen_random_bytes() failed. %s:%d.\n",
-				__FILE__,__LINE__-1);
-		return EXIT_FAILURE;
-	}
-	*/
-
 	char const *prefix = "$y$10$";
 	char *internal_salt = NULL;
 	if(!salt) {
@@ -2617,30 +2652,18 @@ clean_on_exit:
 }
 
 
-#if !HAVE_LIBSTROP
 static size_t number_of_digit(int n)
 {
-	if(n < 10) {
-		return 1;
-	}else if(n >= 10 && n < 100) {
-		return 2;
-	}else if(n >= 100 && n < 1000) {
-		return 3;
-	}else if(n >= 1000 && n < 10000) {
-		return 4;
-	}else if(n >= 10000 && n < 100000) {
-		return 5;
-	}else if(n >= 100000 && n < 1000000) {
-		return 6;
-	}else if(n >= 1000000 && n < 1000000000) {
-		return 7;
-	}else if(n >= 1000000000) {
-		return 10;
-	}
-
+	if(n < 10) return 1;
+	if(n >= 10 && n < 100) 	return 2;
+	if(n >= 100 && n < 1000) return 3;
+	if(n >= 1000 && n < 10000) return 4;
+	if(n >= 10000 && n < 100000) return 5;
+	if(n >= 100000 && n < 1000000) return 6;
+	if(n >= 1000000 && n < 1000000000) return 7;
+	if(n >= 1000000000) return 10;
 	return -1;	
 }
-#endif /*HAVE_LIBSTROP*/
 
 /*
  * clean_home_dir() check if the directory hm_path contains files,
