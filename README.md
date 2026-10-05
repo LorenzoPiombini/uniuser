@@ -30,7 +30,7 @@ int create_group(char* group_name);
 int del_group(char *group_name);
 int edit_group_user(char *username, char *group_name, int mod);
 int paswd_chk(char *passwrd,int rules);
-int list_group(char *username, char **list);
+int list_group(char *username, char *list);
 ```
 ---
 
@@ -56,7 +56,6 @@ Navigate to the cloned directory and run the following commands to configure and
 
 ```bash
 $ cd uniuser
-$ ./configure
 $ sudo make build
 ```
 
