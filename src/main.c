@@ -5,13 +5,16 @@
 
 #define MAX_LENGTH 600
 
+void print_usage();
 int main(int argc, char** argv)
 {
+	
 	char Prog[] = "userctl";
 	if(argc < 2) {
-		fprintf(stderr,"Usage: ./%s [username] \nUsage: ./%s -OPTIONS\n",Prog,Prog);
+		print_usage();
 		return -1;
 	}
+
 
 	int ret = 0;
 	int opt = 0;
@@ -240,10 +243,13 @@ int main(int argc, char** argv)
 		ret = edit_user(username,NULL,operation,1,password);
 		switch(ret){
 		case -1:
-			fprintf(stdout,"(%s): can't change password fpr user '%s'.\n",Prog,username);
+			fprintf(stdout,"(%s): can't change password for user '%s'.\n",Prog,username);
+			break;
+		case ENONE_U:
+			fprintf(stdout,"(%s): user '%s' doesn't exist.\n",Prog,username);
 			break;
 		default:
-			fprintf(stdout,"(%s): pasword changed for user '%s'.\n",Prog,username);
+			fprintf(stdout,"(%s): password changed for user '%s'.\n",Prog,username);
 			break;
 		}
 		break;
@@ -298,4 +304,21 @@ int main(int argc, char** argv)
 	}
 		
 	return 0;
+}
+
+void print_usage()
+{
+	char prog[] = "userctl";
+	printf("Usage: %s %s\t\t- add user <username>\n",prog,"<username>");
+	printf("\t%s -g <groupname> -u <username>\t\t- add group <groupname> to user <username>\n", prog);
+	printf("\t%s -u <username>  -p <password>\t\t- add user <username> with password <password>\n",prog);
+	printf("\t%s -u <username>  -G <gecos>\t\t- add user <username> with gecos <gecos>\n",prog);
+	printf("\t%s -u <username>  -p <password> -G <gecos>\t\t- add user <username> with password <password> and gecos <gecos>\n",prog);
+	printf("\t%s -eu <username> -p <password>\t\t- change password to <password> for user <username>\n",prog);
+	printf("\t%s -g %s -u %s \t\t- add <gruopname> for user <username>\n",prog,"<groupname>","<username>");
+	printf("\t%s -eu <username> -G <gecos>\t\t- change <gecos> for user <username>\n",prog);
+	printf("\t%s -eu <username> -c <newusername>\t- change <username> to <newusername>\n",prog);
+	printf("\t%s -ed -u <username>\t\t- del group from user <username>\n",prog);
+	printf("\t%s -du %s - delete user %s\n",prog,"<username>", "<username>");
+	printf("\t%s -dg %s - delete group %s\n",prog,"<groupname>","<groupname>");
 }

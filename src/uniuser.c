@@ -110,8 +110,10 @@ static const char randombytes[] = { 'c','&','d','"','o','6','@','^',
 /* needed to spawn the user session*/
 extern char **environ;
 
-int login(char *username, char *passwd, int mod)
+int uniuser_login(char *username, char *passwd, int mod)
 {
+	if(!username) return -1;
+
         struct passwd *pw = getpwnam(username);
         if(!pw) {
                 fprintf(stderr,"user does't exist");
@@ -125,14 +127,13 @@ int login(char *username, char *passwd, int mod)
 	char *svd_pswd = NULL;
 	if(get_save_pswd(username,&svd_pswd) == -1) {
                 fprintf(stderr,"can't get password from db.\n");
-		return -1;
+                goto end;
 	}
 
 	char *salt = NULL;
         if(extract_salt(svd_pswd,&salt) == -1){
                 fprintf(stderr,"can't get password from db.\n");
-		free(svd_pswd);
-		return -1;
+                goto end;
 	}	
 	/*
          * encrtypt the password and compare it 
@@ -143,25 +144,23 @@ int login(char *username, char *passwd, int mod)
 		fprintf(stderr,
 				"paswd encryption failed. %s:%d.\n",
 				__FILE__,__LINE__-1);
-		free(svd_pswd);
-                return -1;
+                goto end;
         } 
 
 	free(salt);	
 	if(strncmp(hash,svd_pswd,strlen(hash)) == 0){
-		free(hash);
-		free(svd_pswd);
 		if(mod == STD){ 
-			if(start_user_session(pw) == -1)
-				return -1;
+			if(start_user_session(pw) == -1) goto end;
 		}
 
 		return EXIT_SUCCESS;
 	}
 
 
-	free(hash);
-	free(svd_pswd);
+	
+end:
+	if(hash) 	free(hash);
+	if(svd_pswd) 	free(svd_pswd);
 	return -1;
 }
 
@@ -283,7 +282,6 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 				fprintf(stderr,"can't lock the file.\n");
 				goto end;
 			}
-
 			
 			/* write the new passwd to file  */		
 			if(edit_shdow_file(username,hash,CH_PWD,NULL)){
@@ -390,11 +388,6 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 	}
 	case (CH_GECOS | CH_PWD):
 	{
-		if(!user_already_exist(username)){ 
-			err =  ENONE_U;
-			goto end;
-		}
-
 		if (n_elem < 2 || n_elem > 2) goto end;
 
 		/*change password*/
@@ -421,6 +414,7 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 			}
 
 			free(hash);
+			hash = NULL;
 
 			if(unlock_file(SHADOW_LCK) == -1){
 				fprintf(stderr,"can't unlock the file.\n");
@@ -467,8 +461,12 @@ int add_user(char *username, char *paswd, char *gecos)
 {
 	if(!username) return -1;
 
-	if(user_already_exist(username)) {
-		return EALRDY_U;	
+	int r = user_already_exist(username);
+	switch(r){
+	case 	-1: 	return -1;
+	case 	0: 	break;
+	case	1:	return EALRDY_U; 
+	default: 	return r;	
 	}
 
 	int status = EXIT_SUCCESS;
@@ -484,27 +482,10 @@ int add_user(char *username, char *paswd, char *gecos)
 
 	struct sys_param param = {0};
 	int ret = get_sys_param(&param);
-	if( ret == -1)
-	{
-		printf("get_sys_param() failed.\n");
-		status =  err;
-		goto clean_on_exit;
-	}else if(ret == ENOENT) {
-		/*set default value*/
-		param.UID_MAX = UID_MAX;
-		param.SUB_UID_MIN = SUB_UID_MIN;
-		param.SUB_UID_MAX = SUB_UID_MAX;
-		param.GID_MAX = GID_MAX;
-		param.SUB_GID_MIN = SUB_GID_MIN;
-		param.SUB_GID_MAX = SUB_GID_MAX;
-		param.SUB_GID_COUNT = SUB_GID_COUNT;
-		param.PASS_MAX_DAYS = PASS_MAX_DAYS;
-		param.PASS_MIN_DAYS = PASS_MIN_DAYS;
-		param.PASS_WARN_AGE = PASS_WARN_AGE;
-		strncpy(param.ENCRYPT_METHOD,ENCRYPT_METHOD,strlen(ENCRYPT_METHOD)+1);
+	switch(ret){
+	case -1: printf("get_sys_param() failed.\n"); status =  err; goto clean_on_exit;
+	default: check_sys_param(&param); break;
 	}
-
-	check_sys_param(&param);
 
 	int uid = 0;
 	int gid = 0;
@@ -550,7 +531,7 @@ int add_user(char *username, char *paswd, char *gecos)
 		status = err;
 		goto clean_on_exit;
 	} else if(sub_gid == ESGID) {
-		printf("maximum nr of sub groubs id reached.\n");
+		printf("maximum nr of sub groups id reached.\n");
 		status = ESGID;
 		goto clean_on_exit;
 	}	
@@ -579,6 +560,7 @@ int add_user(char *username, char *paswd, char *gecos)
 			goto clean_on_exit;
 		}
 	}
+
 	/*
 	 * write the data to the files to add the user
 	 * @@@@@@@ ACQUIRE LOCKS TO BE SURE THIS PROGRAM IS THE ONLY ONE ADDING USERS!!!! @@@@ 
@@ -591,7 +573,6 @@ int add_user(char *username, char *paswd, char *gecos)
 
 	if(setuid(0) == -1) {
 		status = err;
-		free(hash);
 		fprintf(stderr,"permission denied.\n");
 		goto clean_on_exit;
 	}
@@ -601,7 +582,6 @@ int add_user(char *username, char *paswd, char *gecos)
 		/*cannot lock the file*/
 		status = err;
 		fprintf(stderr,"cannot acquire lock on users db files.\n");
-		free(hash);
 		goto clean_on_exit;
 	}
 	
@@ -611,11 +591,9 @@ int add_user(char *username, char *paswd, char *gecos)
 	if(!shdw_write(username,hash,&param)) {
 		status = err;
 		printf("writing shadows files failed.\n");
-		free(hash);
 		goto clean_on_exit;
 	}
 
-	free(hash);
 	
 	/*
 	 * incrementing the last user id and group id 
@@ -632,37 +610,26 @@ int add_user(char *username, char *paswd, char *gecos)
 	if(gecos){
 		
 		if(!psdw_write(username,uid,((gid == uid) || (gid < uid)) ? NULL : &gid,gecos)) {
-			fprintf(stderr,
-					"psdw_write() failed, %s:%d.\n",
-					__FILE__,__LINE__-3);
+			fprintf(stderr,"psdw_write() failed, %s:%d.\n",__FILE__,__LINE__-3);
 			status = err;
 			if(clean_up_file(username,SHADOW) == -1) {
-				fprintf(stderr,
-						"clean up files failed. %s:%d.\n",
-						__FILE__,__LINE__);
+				fprintf(stderr,"clean up files failed. %s:%d.\n",__FILE__,__LINE__);
 			}
 			goto clean_on_exit;
 		}
 	}else{
 		if(!psdw_write(username,uid,((uid == gid) ||(gid < uid)) ? NULL : &gid,NULL)) {
-			fprintf(stderr,
-					"psdw_write() failed, %s:%d.\n",
-					__FILE__,__LINE__-3);
+			fprintf(stderr,"psdw_write() failed, %s:%d.\n",__FILE__,__LINE__-3);
 			status = err;
 			if(clean_up_file(username,SHADOW) == -1) {
-				fprintf(stderr,
-						"clean up files failed. %s:%d.\n",
-						__FILE__,__LINE__);
+				fprintf(stderr,"clean up files failed. %s:%d.\n",__FILE__,__LINE__);
 			}
 			goto clean_on_exit;
 		}
-
 	}
 
 	if(!group_write(username,((uid == gid) || (gid < uid)) ? uid : gid)) {
-		fprintf(stderr,
-				"group_write() failed, %s:%d.\n",
-				__FILE__,__LINE__-3);
+		fprintf(stderr,"group_write() failed, %s:%d.\n",__FILE__,__LINE__-3);
 		status = err;
 		if(clean_up_file(username,SHADOW) == -1   ||
 		   clean_up_file(username,PASSWD) == -1 ) {
@@ -671,7 +638,6 @@ int add_user(char *username, char *paswd, char *gecos)
 					__FILE__,__LINE__-4);
 		}
 		goto clean_on_exit;
-	
 	}
 
 	if(!gshdw_write(username)) {
@@ -824,8 +790,8 @@ int add_user(char *username, char *paswd, char *gecos)
 
 clean_on_exit:
 
-	if(lock)
-		unlock_files();
+	if(lock) unlock_files();
+	if(hash) free(hash);
 			
 	return status;
 }
@@ -845,8 +811,11 @@ int del_user(char *username, int mod)
 
 
 	/*check if the user exists */
-	if(!user_already_exist(username)) {
-		return ENONE_U;	
+	int r = user_already_exist(username);
+	switch(r){
+	case -1: return -1;
+	case 0: fprintf(stderr,"user does't exist"); return -1;
+	default: break;
 	}
 
 	struct passwd *pw = getpwnam(username);
@@ -855,9 +824,8 @@ int del_user(char *username, int mod)
                 return -1;    
         }
         
-	if (pw->pw_uid == 0){
-		return EROOT;
-	}
+	if (pw->pw_uid == 0) return EROOT;
+
 	/* 
 	* changing to root user, if the program is not run by root 
 	* or with root privilegies the function will fail
@@ -868,7 +836,7 @@ int del_user(char *username, int mod)
 		return -1;
 	}
 
-	if( get_conf(REUSE) == REUSE_UID_GID){
+	if(get_conf(REUSE) == REUSE_UID_GID){
 		if(save_IDs(rUID,pw->pw_uid) != 0){
 			fprintf(stderr,"can't save GID.\n");
 			return -1;
@@ -901,7 +869,6 @@ int del_user(char *username, int mod)
 
 
 	if( mod == DEL_SAFE){
-
 		if(directory_exist(USER_DEL_DIR)){
 			/*1 is for '\0' and 1 is for '/' so +2*/
 			size_t l = strlen(USER_DEL_DIR)+strlen(username) + 2;
@@ -1027,8 +994,11 @@ int edit_group_user(char *username, char *group_name, int mod)
 		return ENONE_G ;		
 	}
 
-	if(!user_already_exist(username)) {
-		return ENONE_U;	
+	int r =user_already_exist(username);
+	switch(r){
+	case 0: return ENONE_U;
+	case -1: return -1;	
+	default: break;
 	}
 
 	/*
@@ -1390,8 +1360,10 @@ static int last_UID(char* file_name)
 		fclose(fp);
 		return -1;
 	}
+
 	int size = ftell(fp);
 	rewind(fp);
+
 	char b[size+1];
 	memset(b,0,size+1);
 
@@ -1401,6 +1373,7 @@ static int last_UID(char* file_name)
 	}
 
 	fclose(fp);
+
 	int columns = 500;
 	char line[columns];
 	memset(line,0,columns);
@@ -1984,7 +1957,7 @@ static int clean_up_file(char *username,char *file_name) {
 
 /* 
  * the mod parameter specify 
- * the mode as define in user_create.h
+ * the mode as define in uniuser.h
  * #define ADD_GU 0 ADD USER TO THE GROUP
  * #define DEL_GU 1 REMOVE USER TO THE GROUP
  * */
@@ -2725,24 +2698,19 @@ int get_user_info(char *username, struct user_info* ui)
 
 	strncpy((*ui).dir,pw->pw_dir,strlen(pw->pw_dir));
 			
-	char geco[1024] = {0};
-	
-	if(get_gecos(username,geco) == 0) strcpy((*ui).gecos,geco);
+	if(get_gecos(username,(*ui).gecos) == -1)  return -1;
 
 	(*ui).uid = pw->pw_uid;
 	(*ui).gid = pw->pw_gid;	
 	(*ui).is_admin = is_user_admin(username);	
 	strncpy((*ui).username,username,strlen(username));
 
-	char *list = NULL;
-	list_group(username,&list);
+	list_group(username,(*ui).group_list);
 
-	strncpy((*ui).group_list,list,strlen(list));
-	free(list);
 	return 0;
 }
 
-int list_group(char *username, char **list)
+int list_group(char *username, char *list)
 {
 	FILE *fp = fopen(GP,"r");
 	if(!fp){
@@ -2753,48 +2721,45 @@ int list_group(char *username, char **list)
 	int column = 500;
 	char line[column];
 	memset(line,0,column);
-	*list = malloc(500);
-	if(!(*list)){
-		fprintf(stderr,"malloc failed");
-		return -1;	
-	}
 
-	memset(*list,0,500);
 	size_t len = 0;
 	while(fgets(line,column,fp)){
-			if(strstr(line,username) != NULL){
-				char* s = strtok(line,":");
-				if(!s){
-					fprintf(stderr,"strtok failed\n");
-					free(*list);
-					return -1;
-				}
-
-				if(len == 0){
-					len = strlen(s);
-					strncpy(*list,s,len);
-					(*list)[len] = ',';
-				}else {
-					size_t temp = strlen(s)+1;
-					if(len < 500 && ((len + temp) < 500 )){
-						strncpy(&(*list)[len+1],s,temp);
-						len += temp;
-						(*list)[len] = ',';
-					}
-				}
-							
-
+		if(strstr(line,username) != NULL){
+			char* s = strtok(line,":");
+			if(!s){
+				fprintf(stderr,"strtok failed\n");
+				fclose(fp);
+				return -1;
 			}
+
+			if(len == 0){
+				len = strlen(s);
+				strncpy(list,s,len);
+				list[len] = ',';
+			}else if (len < MAX_STRING_SIZE-1 ){
+				size_t temp = strlen(s)+1;
+				if((len + temp) < MAX_STRING_SIZE -1){
+					strncpy(&list[len+1],s,temp);
+					len += temp;
+					list[len] = ',';
+				}
+			}else{
+				fclose(fp);
+				return -1;
+			}
+		}
 	}
 
 	/*eliminate the last ','*/
-	(*list)[len] = '\0';
+	list[len] = '\0';
 	fclose(fp);
 	return 0;
 }
 
 static int group_exist(char *group_name)
 {
+	if(!group_name) return -1;
+
 	FILE *fp = fopen(GP,"r");
 	if(!fp){
 		fprintf(stderr,"can't open %s.\n",GP);
@@ -2809,7 +2774,7 @@ static int group_exist(char *group_name)
 			fclose(fp);
 			return 1;	
 		}
-		
+
 		memset(line,0,column);
 	}
 
@@ -2827,6 +2792,7 @@ static int directory_exist(char *path)
 
 	return S_ISDIR(stat_buf.st_mode);
 }
+
 static int remove_directory(char *path_dir)
 {
 	/*get current directory */
@@ -2835,7 +2801,7 @@ static int remove_directory(char *path_dir)
 		fprintf(stderr,"can't get current directory");
 		return -1;
 	}
-	
+
 	if(chdir(path_dir) != 0) {
 		fprintf(stderr,"can't change into %s.\n", path_dir);
 		return -1;
@@ -2850,11 +2816,11 @@ static int remove_directory(char *path_dir)
 		}
 		return -1;
 	}	
-		
+
 	struct dirent *dir_cont = NULL;
 	while((dir_cont = readdir(dirp))){
 		if(strcmp(dir_cont->d_name,"..") == 0  ||
-			strcmp(dir_cont->d_name,".") == 0)
+				strcmp(dir_cont->d_name,".") == 0)
 			continue;
 
 		if(dir_cont->d_type == DT_REG){
@@ -2902,7 +2868,7 @@ static int remove_directory(char *path_dir)
 		}
 		return -1;
 	}	
-	
+
 	if(chdir(cur_dir) != 0) {
 		fprintf(stderr,"can't change into %s.\n", path_dir);
 		return -1;
@@ -2933,7 +2899,7 @@ static int is_user_admin(char* username)
 			memset(line,0,columns);
 			continue;
 		}
-		
+
 		if(strstr(line,ADMIN) != NULL) {
 			if(strstr(line,username) != NULL){
 				fclose(fp);
@@ -3058,7 +3024,6 @@ static void clean(char *str, char item)
 		if(*str == item)
 			*str = '\0'; 	
 	}
-
 }
 
 static int get_conf(int conf)
@@ -3565,6 +3530,7 @@ static int edit_group_file(char *groupname, char *changes)
 
 	return 0;
 }
+
 static int edit_gshadow_file(char *username, char *changes)
 {
 	FILE *fp = fopen(G_SHADOW,"r");
@@ -3847,5 +3813,5 @@ static void check_sys_param(struct sys_param *param)
 		(*param).PASS_WARN_AGE = PASS_WARN_AGE;
 	if((*param).ENCRYPT_METHOD[0] == '\0' )
 		strncpy((*param).ENCRYPT_METHOD,ENCRYPT_METHOD,strlen(ENCRYPT_METHOD)+1);
-
 } 
+

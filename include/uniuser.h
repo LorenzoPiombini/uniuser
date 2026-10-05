@@ -152,16 +152,16 @@ struct user_info{
 
 /*operation*/
 /*DO NOT USE 63*/
-#define DEL_USER 160		/*1010 0000 */ /* flag -du <username>*/
-#define ADD_GROUP_TO_USER 58    /*0010 1010*/  /* flag -g <groupname> -u <username>*/
-#define DEL_GROUP 138		/*1000 1010*/  /* flag -dg <groupname> */
-#define USER_AND_PSWD 43	/*0010 1011*/  /* falg -u <username> -p <password>*/
-#define USER_AND_GECOS 36	/*0010 0100*/  /* falg -u <username> -G <gecos>*/
-#define USER_AND_PSWD_AND_GECOS  47 /*0010 1111*/  /* falg -u <username> -p <password> -G <gecos>	*/
-#define DEL_GROUP_FROM_USER 186	/*1011 1010*/  /*flag -ed -u <username> -g <groupname>*/
-#define EDIT_PASWD 59		/*0011 1011*/ /*flag -eu <username> -p <password> */
-#define EDIT_GECOS 52		/*0011 0100*/ /*flag -eu <username> -G <gecos>*/
-#define EDIT_USER  48           /*0011 0000*/ /*flag -eu <username> -c <newusername>*/
+#define DEL_USER 			160	/*1010 0000*/ 	/* flag -du <username>*/
+#define ADD_GROUP_TO_USER 		58 	/*0010 1010*/  	/* flag -g <groupname> -u <username>*/
+#define DEL_GROUP 			138	/*1000 1010*/	/* flag -dg <groupname> */
+#define USER_AND_PSWD 			43	/*0010 1011*/ 	/* flag -u <username> -p <password>*/
+#define USER_AND_GECOS 			36	/*0010 0100*/ 	/* flag -u <username> -G <gecos>*/
+#define USER_AND_PSWD_AND_GECOS  	47 	/*0010 1111*/ 	/* flag -u <username> -p <password> -G <gecos>	*/
+#define DEL_GROUP_FROM_USER 		186	/*1011 1010*/ 	/* flag -ed -u <username> -g <groupname>*/
+#define EDIT_PASWD 			59	/*0011 1011*/ 	/* flag -eu <username> -p <password> */
+#define EDIT_GECOS 			52	/*0011 0100*/ 	/* flag -eu <username> -G <gecos>*/
+#define EDIT_USER  			48      /*0011 0000*/ 	/* flag -eu <username> -c <newusername>*/
 
 #define CH_PWD EDIT_PASWD
 #define CH_GECOS EDIT_GECOS
@@ -172,14 +172,14 @@ struct user_info{
 int crypt_pswd(char *paswd, char **hash, char* salt);
 int add_user(char *username, char *paswd, char *gecos);
 int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...);
-int login(char *username, char *passwd, int mod);
+int uniuser_login(char *username, char *passwd, int mod);
 int get_user_info(char *username, struct user_info *ui);
 int del_user(char *username, int mod);
 int create_group(char* group_name);
 int del_group(char *group_name);
 int edit_group_user(char *username, char *group_name, int mod);
 int paswd_chk(char *passwrd,int rules);
-int list_group(char *username, char **list);
+int list_group(char *username, char *list);
 
 
 #endif /* uniuser.h */
