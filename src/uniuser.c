@@ -114,6 +114,7 @@ int uniuser_login(char *username, char *passwd, int mod)
 {
 	if(!username) return -1;
 
+	char *svd_pswd = *salt = *hash = NULL;
         struct passwd *pw = getpwnam(username);
         if(!pw) {
                 fprintf(stderr,"user does't exist");
@@ -124,13 +125,11 @@ int uniuser_login(char *username, char *passwd, int mod)
 	 * get the passwd from SHADOW file,
 	 * and extract the salt
 	 * */
-	char *svd_pswd = NULL;
 	if(get_save_pswd(username,&svd_pswd) == -1) {
                 fprintf(stderr,"can't get password from db.\n");
                 goto end;
 	}
 
-	char *salt = NULL;
         if(extract_salt(svd_pswd,&salt) == -1){
                 fprintf(stderr,"can't get password from db.\n");
                 goto end;
@@ -139,7 +138,6 @@ int uniuser_login(char *username, char *passwd, int mod)
          * encrtypt the password and compare it 
          * with the password in the database.
          * */
-	char *hash = NULL;
 	if(crypt_pswd(passwd,&hash, salt) == -1) {
 		fprintf(stderr,
 				"paswd encryption failed. %s:%d.\n",
@@ -156,8 +154,6 @@ int uniuser_login(char *username, char *passwd, int mod)
 		return EXIT_SUCCESS;
 	}
 
-
-	
 end:
 	if(hash) 	free(hash);
 	if(svd_pswd) 	free(svd_pswd);
@@ -173,12 +169,8 @@ end:
 
 static int get_save_pswd(char *username, char **svd_pswd)
 {
-	FILE *fp;
-
-	do
-	{
-		fp = fopen(SHADOW,"r");
-	}while(fp == NULL);
+	FILE *fp = fopen(SHADOW,"r");
+	if(!fp) return -1;
 	
 	int columns = 5000;
 	char line[columns];
@@ -193,6 +185,7 @@ static int get_save_pswd(char *username, char **svd_pswd)
 		char *t = strtok(buff,":");
 		if(!t){
 			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			fclose(fp);
 			return -1;
 		}
 		if(strlen(username) != strlen(t)){
@@ -208,20 +201,23 @@ static int get_save_pswd(char *username, char **svd_pswd)
 		t = strtok(NULL,":");
 		if(!t){
 			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			fclose(fp);
 			return -1;
 		}
 		*svd_pswd = strdup(t);
 		if(!(*svd_pswd)) {
 			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
+			fclose(fp);
 			return -1;
 		}else {
+			fclose(fp);
 			return 0;
 		}
 
 	}
 
+	fclose(fp);
 	return -1;
-
 }
 
 /*
