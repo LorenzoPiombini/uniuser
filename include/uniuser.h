@@ -86,6 +86,7 @@
 #define EGECOS 23 /*edit user  GECOS faield*/
 #define EUSRNAME 24 /*edit user's username failed*/
 #define EUSRSAME 25 /*you are trying to change the username to the same username*/
+#define EPSWDEXP 26 /*password expired*/
 
 /*used to calculate the password day creation*/
 #define DSEC (60*60*24) /* seconds in a day*/

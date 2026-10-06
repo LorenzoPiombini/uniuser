@@ -126,7 +126,8 @@ int uniuser_login(char *username, char *passwd, int mod)
 	 * get the passwd from SHADOW file,
 	 * and extract the salt
 	 * */
-	if(get_save_pswd(username,&svd_pswd) == -1) {
+    int r = 0;
+	if((r = get_save_pswd(username,&svd_pswd) == -1 || r == EPSWDEXP)) {
         fprintf(stderr,"can't get password from db.\n");
         goto end;
 	}
@@ -171,62 +172,75 @@ end:
 
 /*
  * this function retrive the password saved in the database
- * and compare it to the one provided from the users
- * if returns 0 it means the user is authenticated
- *
  * */
 
 static int get_save_pswd(char *username, char **svd_pswd)
 {
 	FILE *fp = fopen(SHADOW,"r");
 	if(!fp) return -1;
+    
+    if(fseek(fp,0,SEEK_END) == -1){
+        fclose(fp);
+        return -1;
+    }    
+    int size = (int)ftell(fp);
+    rewind(fp);
+
+    char buf[size+1];
+    memset(buf,0,size+1);
+    if(fwrite(buf,size,1,fp) == -1){
+        fclose(fp);
+        return -1;
+    }    
+    fclose(fp);   
+    
 	
-	int columns = 5000;
-	char line[columns];
-	memset(line,0,columns);
+    char *user =  strstr(buf,username);
+    if(!user) return -1;
 
-	while(fgets(line,columns,fp)) {
-		size_t l = strlen(line)+1;
-		char buff[l];
-		memset(buff,0,l);
-		strncpy(buff,line,l);
+    int last_pswd_change = 0;
+	char *t = strtok(user,":");
+	if(!t) return -1;
 
-		char *t = strtok(buff,":");
-		if(!t){
-			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
-			fclose(fp);
-			return -1;
-		}
-		if(strlen(username) != strlen(t)){
-			memset(line,0,columns);
-			continue;
-		}
-		
-		if(strncmp(username,t,strlen(t)) != 0){
-			memset(line,0,columns);
-			continue;
-		}
-
+    for(int i = 0; i < 7; i++){
 		t = strtok(NULL,":");
-		if(!t){
-			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
-			fclose(fp);
-			return -1;
-		}
-		*svd_pswd = strdup(t);
-		if(!(*svd_pswd)) {
-			fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);
-			fclose(fp);
-			return -1;
-		}else {
-			fclose(fp);
-			return 0;
-		}
+        switch(i){
+        case 0: /*PSWD*/
+        {       
+                if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
+		        *svd_pswd = strdup(t);
+		        if(!(*svd_pswd)) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);return -1;}
+                break; 
+        }   
+        case 1: 
+        { 
+            if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
+            char *ep; errno = 0;
+            last_pswd_change = (int)strtol(t,&ep,10);
+            if(*ep != '0') return -1;
+            break; 
+        }
+        case 2:break; /*not supported(yet)*/
+        case 3:break; /*not supported(yet)*/
+        case 4:/*PSWD warning*/
+        { 
+            if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
+            char *ep; errno = 0;
+            int psw_warning= (int)strtol(t,&ep,10);
+            if(*ep != '0') return -1;
 
-	}
-
-	fclose(fp);
-	return -1;
+            
+            time_t seconds = time(NULL);
+            long days_nr = (long) seconds / DSEC;
+            if((days_nr - last_pswd_change) > psw_warning) return EPSWDEXP; 
+            break; 
+        }
+        case 5:break; /*not supported(yet)*/
+        case 6:break; /*not supported(yet)*/
+        default: break;
+		}
+    }
+    return 0;
 }
 
 /*
@@ -474,7 +488,7 @@ int add_user(char *username, char *paswd, char *gecos)
 	default: 	return r;	
 	}
 
-	int status = EXIT_SUCCESS;
+	int status = 0;
 	int err = -1;
 	unsigned char lock = 0;
 	/*
