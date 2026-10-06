@@ -217,7 +217,7 @@ static int get_save_pswd(char *username, char **svd_pswd)
             if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
             char *ep; errno = 0;
             last_pswd_change = (int)strtol(t,&ep,10);
-            if(*ep != '0') return -1;
+            if(*ep != '\0') return -1;
             break; 
         }
         case 2:break; /*not supported(yet)*/
@@ -227,7 +227,7 @@ static int get_save_pswd(char *username, char **svd_pswd)
             if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
             char *ep; errno = 0;
             int psw_warning= (int)strtol(t,&ep,10);
-            if(*ep != '0') return -1;
+            if(*ep != '\0') return -1;
 
             
             time_t seconds = time(NULL);
