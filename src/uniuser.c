@@ -150,6 +150,8 @@ int uniuser_login(char *username, char *passwd, int mod)
 
 	free(salt);	
 	salt = NULL;
+    if(strlen(hash) != strlen(svd_pswd)) goto end;
+
 	if(strncmp(hash,svd_pswd,strlen(svd_pswd)) == 0){
 		if(mod == STD){ 
 			if(start_user_session(pw) == -1) goto end;
@@ -2934,10 +2936,10 @@ static int str_contain_commas(char *str)
 
 static int extract_salt(char *pswd_hashed, char **salt)
 {
-    if(!pswd_hashed)                return -1;
-    if(pswd_hashed[0] == '!')       return -1;
-    if(strlen(pswd_hashed) <= 7)    return -1;
-    if(!strstr(pswd_hashed,"$7$"))  return -1;
+    if(!pswd_hashed)                       return -1;
+    if(pswd_hashed[0] == '!')              return -1;
+    if(strlen(pswd_hashed) <= 7)           return -1;
+    if(strncmp(pswd_hashed,"$y$",3) != 0)  return -1;
 
 	size_t l = strlen(&pswd_hashed[7]);
 	char buff[l+1];
