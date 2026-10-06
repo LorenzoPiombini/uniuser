@@ -114,49 +114,50 @@ int uniuser_login(char *username, char *passwd, int mod)
 {
 	if(!username) return -1;
 
-	char *svd_pswd = *salt = *hash = NULL;
-        struct passwd *pw = getpwnam(username);
-        if(!pw) {
-                fprintf(stderr,"user does't exist");
-                return -1;    
-        }
+    char *svd_pswd = *salt = *hash = NULL;
+    struct passwd *pw = getpwnam(username);
+    if(!pw) {
+        fprintf(stderr,"user does't exist");
+        return -1;    
+    }
         
  	/*
 	 * get the passwd from SHADOW file,
 	 * and extract the salt
 	 * */
 	if(get_save_pswd(username,&svd_pswd) == -1) {
-                fprintf(stderr,"can't get password from db.\n");
-                goto end;
+        fprintf(stderr,"can't get password from db.\n");
+        goto end;
 	}
 
-        if(extract_salt(svd_pswd,&salt) == -1){
-                fprintf(stderr,"can't get password from db.\n");
-                goto end;
+    if(extract_salt(svd_pswd,&salt) == -1){
+        fprintf(stderr,"can't get password from db.\n");
+        goto end;
 	}	
-	/*
-         * encrtypt the password and compare it 
-         * with the password in the database.
-         * */
-	if(crypt_pswd(passwd,&hash, salt) == -1) {
-		fprintf(stderr,
-				"paswd encryption failed. %s:%d.\n",
-				__FILE__,__LINE__-1);
+    /*
+     * encrtypt the password and compare it 
+     * with the password in the database.
+     * */
+    if(crypt_pswd(passwd,&hash, salt) == -1) {
+        fprintf(stderr,
+                "paswd encryption failed. %s:%d.\n",
+                __FILE__,__LINE__-1);
                 goto end;
-        } 
+    } 
 
 	free(salt);	
+	salt = NULL;
 	if(strncmp(hash,svd_pswd,strlen(hash)) == 0){
 		if(mod == STD){ 
 			if(start_user_session(pw) == -1) goto end;
 		}
-
 		return EXIT_SUCCESS;
 	}
 
 end:
 	if(hash) 	free(hash);
 	if(svd_pswd) 	free(svd_pswd);
+	if(salt) 	free(salt);
 	return -1;
 }
 
@@ -1688,7 +1689,7 @@ int crypt_pswd(char *paswd, char **hash, char* salt)
 	size_t l = strlen(paswd);
 	if(l > CRYPT_MAX_PASSPHRASE_SIZE) {
 		fprintf(stderr,"password too long.\n");
-		return EXIT_FAILURE;
+		return -1;
 	}
 
 	struct crypt_data data = {0};
@@ -1704,19 +1705,21 @@ int crypt_pswd(char *paswd, char **hash, char* salt)
 			fprintf(stderr,
 					"crypt_gensalt() failed. %s:%d.\n",
 					__FILE__,__LINE__-2);
-			return EXIT_FAILURE;
+			return -1;
 		}
 
 		crypt_r(data.input,internal_salt,&data);
+        if(data.output[0] == '*') reutrn -1;
 	}else {
 		crypt_r(data.input,salt,&data);
+        if(data.output[0] == '*') reutrn -1;
 	}
 		
 	if(data.output[0] == '\0') {
 		fprintf(stderr,
 				"crypt_r() failed. %s:%d.\n",
 				__FILE__,__LINE__-2);
-		return EXIT_FAILURE;
+		return -1;
 	}
 
 	*hash = strdup(data.output);
@@ -1724,10 +1727,10 @@ int crypt_pswd(char *paswd, char **hash, char* salt)
 		fprintf(stderr,
 				"strdup failed %s:%d.\n",
 				__FILE__,__LINE__-2);
-		return EXIT_FAILURE;
+		return -1;
 	}	
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
 static int lock_file(char *file_name)
@@ -2924,6 +2927,7 @@ static int str_contain_commas(char *str)
 
 static int extract_salt(char *pswd_hashed, char **salt)
 {
+    if(pswd_hashed[0] == '!') return -1;
 	size_t l = strlen(&pswd_hashed[7])+1;
 	char buff[l];
 	memset(buff,0,l);
