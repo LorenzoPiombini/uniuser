@@ -150,7 +150,7 @@ int uniuser_login(char *username, char *passwd, int mod)
 
 	free(salt);	
 	salt = NULL;
-	if(strncmp(hash,svd_pswd,strlen(hash)) == 0){
+	if(strncmp(hash,svd_pswd,strlen(svd_pswd)) == 0){
 		if(mod == STD){ 
 			if(start_user_session(pw) == -1) goto end;
 		}
@@ -1692,6 +1692,7 @@ static unsigned char gen_random_bytes(char *buffer,int length)
 int crypt_pswd(char *paswd, char **hash, char* salt)
 {
 
+    if(!paswd) return -1;
 	size_t l = strlen(paswd);
 	if(l > CRYPT_MAX_PASSPHRASE_SIZE) {
 		fprintf(stderr,"password too long.\n");
@@ -2933,10 +2934,14 @@ static int str_contain_commas(char *str)
 
 static int extract_salt(char *pswd_hashed, char **salt)
 {
-    if(pswd_hashed[0] == '!') return -1;
-	size_t l = strlen(&pswd_hashed[7])+1;
-	char buff[l];
-	memset(buff,0,l);
+    if(!pswd_hashed)                return -1;
+    if(pswd_hashed[0] == '!')       return -1;
+    if(strlen(pswd_hashed) <= 7)    return -1;
+    if(!strstr(pswd_hashed,"$7$"))  return -1;
+
+	size_t l = strlen(&pswd_hashed[7]);
+	char buff[l+1];
+	memset(buff,0,l+1);
 
 	strncpy(buff,&pswd_hashed[7],l);
 
