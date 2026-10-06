@@ -131,6 +131,8 @@ int uniuser_login(char *username, char *passwd, int mod)
         goto end;
 	}
 
+    if(!svd_pswd) goto end;
+
     if(extract_salt(svd_pswd,&salt) == -1){
         fprintf(stderr,"can't get password from db.\n");
         goto end;
@@ -152,6 +154,9 @@ int uniuser_login(char *username, char *passwd, int mod)
 		if(mod == STD){ 
 			if(start_user_session(pw) == -1) goto end;
 		}
+        if(hash) 	free(hash);
+        if(svd_pswd) 	free(svd_pswd);
+        if(salt) 	free(salt);
 		return EXIT_SUCCESS;
 	}
 
