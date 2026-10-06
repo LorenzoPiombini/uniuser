@@ -114,7 +114,8 @@ int uniuser_login(char *username, char *passwd, int mod)
 {
 	if(!username) return -1;
 
-    char *svd_pswd = *salt = *hash = NULL;
+    char *svd_pswd,*salt,*hash;
+    svd_pswd = salt = hash = NULL;
     struct passwd *pw = getpwnam(username);
     if(!pw) {
         fprintf(stderr,"user does't exist");
@@ -1709,10 +1710,10 @@ int crypt_pswd(char *paswd, char **hash, char* salt)
 		}
 
 		crypt_r(data.input,internal_salt,&data);
-        if(data.output[0] == '*') reutrn -1;
+        if(data.output[0] == '*') return -1;
 	}else {
 		crypt_r(data.input,salt,&data);
-        if(data.output[0] == '*') reutrn -1;
+        if(data.output[0] == '*') return -1;
 	}
 		
 	if(data.output[0] == '\0') {
