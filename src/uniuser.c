@@ -188,7 +188,7 @@ static int get_save_pswd(char *username, char **svd_pswd)
 
     char buf[size+1];
     memset(buf,0,size+1);
-    if(fwrite(buf,size,1,fp) == -1){
+    if(fread(buf,size,1,fp) == -1){
         fclose(fp);
         return -1;
     }    
