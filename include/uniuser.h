@@ -143,26 +143,28 @@ struct user_info{
 };
 
 /*MASK value operation */
-#define USER 32		/*0010 0000*/
-#define DEL_F 64	/*0100 0000*/
-#define DEL 128		/*1000 0000*/
-#define GROUP 10	/*0000 1010*/
-#define PWD 11		/*0000 1011*/
-#define GECOS 4		/*0000 0100*/
-#define EDIT 16		/*0001 0000*/
+#define USER  (unsigned char)    32	/*0010 0000*/
+#define DEL_F (unsigned char)    64	/*0100 0000*/
+#define DEL   (unsigned char)   128	/*1000 0000*/
+#define GROUP (unsigned char)    10	/*0000 1010*/
+#define PWD   (unsigned char)    11	/*0000 1011*/
+#define GECOS (unsigned char)     4	/*0000 0100*/
+#define EDIT  (unsigned char)    16	/*0001 0000*/
+#define LOGIN (unsigned char)   192  /*1100 0000*/
 
 /*operation*/
 /*DO NOT USE 63*/
-#define DEL_USER 			160	/*1010 0000*/ 	/* flag -du <username>*/
-#define ADD_GROUP_TO_USER 		58 	/*0010 1010*/  	/* flag -g <groupname> -u <username>*/
-#define DEL_GROUP 			138	/*1000 1010*/	/* flag -dg <groupname> */
-#define USER_AND_PSWD 			43	/*0010 1011*/ 	/* flag -u <username> -p <password>*/
-#define USER_AND_GECOS 			36	/*0010 0100*/ 	/* flag -u <username> -G <gecos>*/
-#define USER_AND_PSWD_AND_GECOS  	47 	/*0010 1111*/ 	/* flag -u <username> -p <password> -G <gecos>	*/
-#define DEL_GROUP_FROM_USER 		186	/*1011 1010*/ 	/* flag -ed -u <username> -g <groupname>*/
-#define EDIT_PASWD 			59	/*0011 1011*/ 	/* flag -eu <username> -p <password> */
-#define EDIT_GECOS 			52	/*0011 0100*/ 	/* flag -eu <username> -G <gecos>*/
-#define EDIT_USER  			48      /*0011 0000*/ 	/* flag -eu <username> -c <newusername>*/
+#define DEL_USER 			    (unsigned char) 160  /*1010 0000*/ 	/* flag -du <username>*/
+#define ADD_GROUP_TO_USER 		(unsigned char) 58 	/*0010 1010*/  	/* flag -g <groupname> -u <username>*/
+#define DEL_GROUP 			    (unsigned char) 138  /*1000 1010*/	/* flag -dg <groupname> */
+#define USER_AND_PSWD 			(unsigned char) 43	/*0010 1011*/ 	/* flag -u <username> -p <password>*/
+#define USER_AND_GECOS 			(unsigned char) 36	/*0010 0100*/ 	/* flag -u <username> -G <gecos>*/
+#define USER_AND_PSWD_AND_GECOS (unsigned char) 47   /*0010 1111*/ 	/* flag -u <username> -p <password> -G <gecos>	*/
+#define DEL_GROUP_FROM_USER 	(unsigned char) 186  /*1011 1010*/ 	/* flag -ed -u <username> -g <groupname>*/
+#define EDIT_PASWD 			    (unsigned char) 59   /*0011 1011*/ 	/* flag -eu <username> -p <password> */
+#define EDIT_GECOS 			    (unsigned char) 52   /*0011 0100*/ 	/* flag -eu <username> -G <gecos>*/
+#define EDIT_USER  			    (unsigned char) 48   /*0011 0000*/ 	/* flag -eu <username> -c <newusername>*/
+#define LOGIN_USER              (unsigned char) 235  /*1110 1011*/ 	/* flag -lu <username> -p <password>*/
 
 #define CH_PWD EDIT_PASWD
 #define CH_GECOS EDIT_GECOS
