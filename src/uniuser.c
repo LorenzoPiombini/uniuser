@@ -127,7 +127,7 @@ int uniuser_login(char *username, char *passwd, int mod)
 	 * and extract the salt
 	 * */
     int r = 0;
-	if((r = get_save_pswd(username,&svd_pswd) == -1 || r == EPSWDEXP)) {
+	if((r = get_save_pswd(username,&svd_pswd)) == -1 || r == EPSWDEXP){
         fprintf(stderr,"can't get password from db.\n");
         goto end;
 	}
