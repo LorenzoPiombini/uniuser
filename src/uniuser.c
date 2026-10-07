@@ -110,6 +110,12 @@ static const char randombytes[] = { 'c','&','d','"','o','6','@','^',
 /* needed to spawn the user session*/
 extern char **environ;
 
+struct String_data{
+    char *cursor;
+    char delim;
+};
+static char *string_tok(struct String_data *state);
+
 int uniuser_login(char *username, char *passwd, int mod)
 {
 	if(!username) return -1;
@@ -205,48 +211,44 @@ again:
          goto again;
     }
 
+    struct String_data state = {user,':'};
     int last_pswd_change = 0;
-	char *t = strtok(user,":");
-	if(!t) return -1;
-
-    for(int i = 0; i < 7; i++){
-		t = strtok(NULL,":");
+    for(int i = 0; i < 9; i++){
+        char *p = string_tok(&state);
+        if(!p) return -1;
+         
         switch(i){
-        case 0: /*PSWD*/
+        case 1: /*PSWD*/
         {       
-                if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
-                if(*t == '\0') return -1;
-		        *svd_pswd = strdup(t);
-		        if(!(*svd_pswd)) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);return -1;}
-                break; 
+            if(*p == '\0') return -1; /*cannot be empty*/
+            *svd_pswd = strdup(p);
+            if(!(*svd_pswd)) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);return -1;}
+            break; 
         }   
-        case 1: 
+        case 2: 
         { 
-            if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
-            if(*t == '\0') return -1;
+            if(*p == '\0') return -1; /*cannot be empty*/
             char *ep; errno = 0;
-            last_pswd_change = (int)strtol(t,&ep,10);
+            last_pswd_change = (int)strtol(p,&ep,10);
             if(*ep != '\0') return -1;
             break; 
         }
-        case 2:break; /*not supported(yet)*/
         case 3:break; /*not supported(yet)*/
-        case 4:/*PSWD warning*/
+        case 4:/*PSWD max period*/
         { 
-            if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
-            if(*t == '\0') return -1;
+            if(*p == '\0') return -1; /*cannot be empty*/
             char *ep; errno = 0;
-            int psw_warning= (int)strtol(t,&ep,10);
+            int psw_max_age= (int)strtol(p,&ep,10);
             if(*ep != '\0') return -1;
-
             
             time_t seconds = time(NULL);
             long days_nr = (long) seconds / DSEC;
-            if((days_nr - last_pswd_change) > psw_warning) return EPSWDEXP; 
+            if((days_nr - last_pswd_change) > psw_max_age) return EPSWDEXP; 
             break; 
         }
         case 5:break; /*not supported(yet)*/
         case 6:break; /*not supported(yet)*/
+        case 7:break; /*not supported(yet)*/
         default: break;
 		}
     }
@@ -3852,3 +3854,19 @@ static void check_sys_param(struct sys_param *param)
 		strncpy((*param).ENCRYPT_METHOD,ENCRYPT_METHOD,strlen(ENCRYPT_METHOD)+1);
 } 
 
+static char *string_tok(struct String_data *state){
+
+        if(!state || !state->cursor || state->delim == '\0') return NULL;
+
+        char *token = state->cursor;
+        char *end = strchr(token,state->delim);
+        
+        if(end){
+            *end = '\0';
+            state->cursor = end + 1;
+        } else{
+            state->cursor = NULL;
+        }
+       
+        return token;
+}
