@@ -211,8 +211,11 @@ again:
          goto again;
     }
 
+    char *nl = strchr(user,'\n');
+    if(nl)*nl = '\0';
+
     struct String_data state = {user,':'};
-    int last_pswd_change = 0;
+    long last_pswd_change = 0;
     for(int i = 0; i < 9; i++){
         char *p = string_tok(&state);
         if(!p) return -1;
@@ -229,7 +232,7 @@ again:
         { 
             if(*p == '\0') return -1; /*cannot be empty*/
             char *ep; errno = 0;
-            last_pswd_change = (int)strtol(p,&ep,10);
+            last_pswd_change = strtol(p,&ep,10);
             if(*ep != '\0') return -1;
             break; 
         }
@@ -238,7 +241,7 @@ again:
         { 
             if(*p == '\0') return -1; /*cannot be empty*/
             char *ep; errno = 0;
-            int psw_max_age= (int)strtol(p,&ep,10);
+            long psw_max_age= strtol(p,&ep,10);
             if(*ep != '\0') return -1;
             
             time_t seconds = time(NULL);
@@ -248,7 +251,18 @@ again:
         }
         case 5:break; /*not supported(yet)*/
         case 6:break; /*not supported(yet)*/
-        case 7:break; /*not supported(yet)*/
+        case 7:/*can be empty*/
+        {
+            if(*p == '\0') break;
+            char *ep;
+            long account_expiration = strtol(p,&ep,10);
+            if(*ep != '\0') return -1;
+            
+            time_t seconds = time(NULL);
+            long days_nr = (long) seconds / DSEC;
+            if(days_nr >= account_expiration) return -1;
+            break;
+        }
         default: break;
 		}
     }
