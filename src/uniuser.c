@@ -173,6 +173,7 @@ end:
 	if(hash) 	free(hash);
 	if(svd_pswd) 	free(svd_pswd);
 	if(salt) 	free(salt);
+    if(r == EPSWDEXP) return EPSWDEXP;
 	return -1;
 }
 
@@ -199,9 +200,7 @@ static int get_save_pswd(char *username, char **svd_pswd)
         fclose(fp);
         return -1;
     }    
-    fclose(fp);   
-    
-	
+    fclose(fp);  
     
 again:
     char *user =  strstr(buf,username);
@@ -307,8 +306,6 @@ int edit_user(char *username, int *uid, int element_to_change,int n_elem, ...)
 		return -1;
 	}
 
-
-	
 	switch(element_to_change){
 	case CH_PWD:
 	{

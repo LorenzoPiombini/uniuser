@@ -24,8 +24,11 @@ int main(int argc, char** argv)
 	char group_name[MAX_LENGTH]= {0};
 	char changes[MAX_LENGTH] = {0};
 	
-	while((opt = getopt(argc,argv,"u:dg:p:eG:c:")) != -1){
+	while((opt = getopt(argc,argv,"u:dg:p:eG:c:l")) != -1){
 		switch(opt){
+        case 'l':
+            operation = operation | LOGIN;
+            break;
 		case 'u':
 			operation = operation | USER;
 			strncpy(username,optarg,strlen(optarg)+1);
@@ -83,6 +86,19 @@ int main(int argc, char** argv)
 	}
 	
 	switch(operation){
+    case LOGIN_USER:
+        ret = uniuser_login(username,password,STD);
+        switch(ret){
+        case -1:
+            fprintf(stderr,"(%s): login failed\n",Prog);
+            break;
+        case EPSWDEXP:
+            fprintf(stderr,"(%s): password is expired!login reject\n",Prog);
+            break;
+        default:
+            break;
+        }
+        break; 
 	case DEL_USER:
 		ret = del_user(username,DEL_SAFE);
 		switch(ret){
@@ -121,23 +137,8 @@ int main(int argc, char** argv)
 			fprintf(stderr,"(%s): exceeded the maximum user number.\n\
 					(%s): user '%s' not added.\n",Prog,Prog,username);
 			return -1;
-		case EALRDY_U: 
-			fprintf(stderr,"(%s): user '%s' already exist.\n",Prog,username);
-			break;
-		case ESGID: 
-			fprintf(stderr,"(%s): SUB_GID_MAX overflowed.\n",Prog);
-			return -1;
-		case ESUID: 
-			fprintf(stderr,"(%s): SUB_UID_MAX overflowed.\n",Prog);
-			return -1;
-		case -1:	
-			fprintf(stderr,"(%s): adding user '%s' failed.\n",Prog,username);
-			return -1;
-		default:
-			fprintf(stdout,"(%s): user %s, added.\n",Prog,username);
-			break;
-		}
-		break;
+        }
+        break; 
 	case USER_AND_PSWD_AND_GECOS:
 		ret = add_user(username,password,changes);
 		switch(ret) {
@@ -309,16 +310,17 @@ int main(int argc, char** argv)
 void print_usage()
 {
 	char prog[] = "userctl";
-	printf("Usage: %s %s\t\t- add user <username>\n",prog,"<username>");
-	printf("\t%s -g <groupname> -u <username>\t\t- add group <groupname> to user <username>\n", prog);
-	printf("\t%s -u <username>  -p <password>\t\t- add user <username> with password <password>\n",prog);
-	printf("\t%s -u <username>  -G <gecos>\t\t- add user <username> with gecos <gecos>\n",prog);
-	printf("\t%s -u <username>  -p <password> -G <gecos>\t\t- add user <username> with password <password> and gecos <gecos>\n",prog);
-	printf("\t%s -eu <username> -p <password>\t\t- change password to <password> for user <username>\n",prog);
-	printf("\t%s -g %s -u %s \t\t- add <gruopname> for user <username>\n",prog,"<groupname>","<username>");
-	printf("\t%s -eu <username> -G <gecos>\t\t- change <gecos> for user <username>\n",prog);
-	printf("\t%s -eu <username> -c <newusername>\t- change <username> to <newusername>\n",prog);
-	printf("\t%s -ed -u <username>\t\t- del group from user <username>\n",prog);
-	printf("\t%s -du %s - delete user %s\n",prog,"<username>", "<username>");
-	printf("\t%s -dg %s - delete group %s\n",prog,"<groupname>","<groupname>");
+	printf("Usage: %s %s\t\t\t- add user <username>\n",prog,"<username>");
+	printf("\t -g <groupname> -u <username>\t\t- add group <groupname> to user <username>\n");
+	printf("\t -u <username>  -p <password>\t\t- add user <username> with password <password>\n");
+	printf("\t -lu <username>  -p <password>\t\t- login (more for testing than anything else)\n");
+	printf("\t -u <username>  -G <gecos>\t\t- add user <username> with gecos <gecos>\n");
+	printf("\t -u <username>  -p <password> -G<gecos> - add user <username> with password <password> and gecos <gecos>\n");
+	printf("\t -eu <username> -p <password>\t\t- change password to <password> for user <username>\n");
+	printf("\t -g %s -u %s \t\t- add <gruopname> for user <username>\n","<groupname>","<username>");
+	printf("\t -eu <username> -G <gecos>\t\t- change <gecos> for user <username>\n");
+	printf("\t -eu <username> -c <newusername>\t- change <username> to <newusername>\n");
+	printf("\t -ed -u <username>\t\t\t- del group from user <username>\n");
+	printf("\t -du %s\t\t\t\t- delete user %s\n","<username>", "<username>");
+	printf("\t -dg %s\t\t\t- delete group %s\n","<groupname>","<groupname>");
 }
