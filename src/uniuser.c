@@ -195,8 +195,13 @@ static int get_save_pswd(char *username, char **svd_pswd)
     fclose(fp);   
     
 	
+again:
     char *user =  strstr(buf,username);
     if(!user) return -1;
+    if(*(t - 1) != '\n'){
+        *t = ' ';
+         goto again;
+    }
 
     int last_pswd_change = 0;
 	char *t = strtok(user,":");
