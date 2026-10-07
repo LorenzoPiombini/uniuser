@@ -199,7 +199,7 @@ static int get_save_pswd(char *username, char **svd_pswd)
 again:
     char *user =  strstr(buf,username);
     if(!user) return -1;
-    if( user != &buf[0]  && *(user - 1) == '\n'){
+    if( user != &buf[0]  && *(user - 1) != '\n'){
         *user = ' ';
          goto again;
     }
