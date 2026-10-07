@@ -234,6 +234,7 @@ again:
             char *ep; errno = 0;
             last_pswd_change = strtol(p,&ep,10);
             if(ep == p || *ep != '\0' || errno == ERANGE || last_pswd_change < 0) return -1;
+            if(last_pswd_change == 0) return EPSWDEXP;
             break; 
         }
         case 3:break; /*not supported(yet)*/
