@@ -233,7 +233,7 @@ again:
             if(*p == '\0') return -1; /*cannot be empty*/
             char *ep; errno = 0;
             last_pswd_change = strtol(p,&ep,10);
-            if(*ep != '\0') return -1;
+            if(ep == p || *ep != '\0' || errno == ERANGE || last_pswd_change < 0) return -1;
             break; 
         }
         case 3:break; /*not supported(yet)*/
@@ -242,7 +242,7 @@ again:
             if(*p == '\0') return -1; /*cannot be empty*/
             char *ep; errno = 0;
             long psw_max_age= strtol(p,&ep,10);
-            if(*ep != '\0') return -1;
+            if(ep == p || *ep != '\0' || errno == ERANGE || psw_max_age < 0) return -1;
             
             time_t seconds = time(NULL);
             long days_nr = (long) seconds / DSEC;
@@ -254,9 +254,10 @@ again:
         case 7:/*can be empty*/
         {
             if(*p == '\0') break;
+            errno = 0;
             char *ep;
             long account_expiration = strtol(p,&ep,10);
-            if(*ep != '\0') return -1;
+            if(ep == p || *ep != '\0'|| errno == ERANGE || account_expiration < 0) return -1;
             
             time_t seconds = time(NULL);
             long days_nr = (long) seconds / DSEC;
