@@ -215,6 +215,7 @@ again:
         case 0: /*PSWD*/
         {       
                 if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
+                if(*t == '\0') return -1
 		        *svd_pswd = strdup(t);
 		        if(!(*svd_pswd)) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2);return -1;}
                 break; 
@@ -222,6 +223,7 @@ again:
         case 1: 
         { 
             if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
+            if(*t == '\0') return -1
             char *ep; errno = 0;
             last_pswd_change = (int)strtol(t,&ep,10);
             if(*ep != '\0') return -1;
@@ -232,6 +234,7 @@ again:
         case 4:/*PSWD warning*/
         { 
             if(!t) {fprintf(stderr,"strtok() failed, %s:%d.\n",__FILE__,__LINE__-2); return -1;}
+            if(*t == '\0') return -1
             char *ep; errno = 0;
             int psw_warning= (int)strtol(t,&ep,10);
             if(*ep != '\0') return -1;
